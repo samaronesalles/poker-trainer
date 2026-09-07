@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Poker Trainer</title>
     <link rel="stylesheet" href="css/mesa.css" />
     <link rel="stylesheet" href="css/cartas.css" />
@@ -14,10 +14,12 @@
       OWN-WORLD: deep baize, mahogany rail, single spotlight, nocturnal action-bar HUD, classic index cards.
       STORY: sit, deal Nova mao, read the board, answer in the table HUD.
       FIRST VIEWPORT: oval felt; Voce larger at bottom; A/B on the arc; five center slots; HUD with Nova mao.
-      FORM: Operate / private club â€” pinned by spec 001.
+      FORM: Operate / private club — pinned by spec 001.
       FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
     -->
-    <div class="clube" id="clube">
+    <a class="skip-link" href="#hud">Ir para a pergunta</a>
+    <main class="clube" id="clube">
+      <h1 class="visually-hidden">Poker Trainer</h1>
       <p class="aviso-file" hidden>
         Abra este treino via HTTP local (http://localhost:8080), nao como arquivo.
       </p>
@@ -27,6 +29,38 @@
             <div class="holofote" aria-hidden="true"></div>
             <div class="sapato" id="sapato" aria-hidden="true"></div>
 
+            <div class="pote" data-pote data-modo="centro" aria-hidden="true">
+              <div class="pote-grupo" data-para="comum">
+                <span class="pote-chip"></span>
+                <span class="pote-chip"></span>
+                <span class="pote-chip"></span>
+                <span class="pote-chip"></span>
+              </div>
+              <div class="pote-grupo" data-para="voce" hidden>
+                <span class="pote-chip"></span>
+                <span class="pote-chip"></span>
+              </div>
+              <div class="pote-grupo" data-para="adversarioA" hidden>
+                <span class="pote-chip"></span>
+                <span class="pote-chip"></span>
+              </div>
+              <div class="pote-grupo" data-para="adversarioB" hidden>
+                <span class="pote-chip"></span>
+                <span class="pote-chip"></span>
+              </div>
+            </div>
+
+            <div class="board" aria-label="Cartas comunitarias">
+              <div class="slot" data-slot="1"></div>
+              <div class="slot" data-slot="2"></div>
+              <div class="slot" data-slot="3"></div>
+              <div class="slot" data-slot="4"></div>
+              <div class="slot" data-slot="5"></div>
+            </div>
+            <div class="burn-area" data-burn></div>
+          </div>
+
+          <div class="arco-adversarios">
             <div class="assento" data-seat="adversarioA">
               <div class="holes">
                 <div class="hole-slot" data-hole="0"></div>
@@ -74,57 +108,27 @@
                 </div>
               </div>
             </div>
+          </div>
 
-            <div class="pote" data-pote data-modo="centro" aria-hidden="true">
-              <div class="pote-grupo" data-para="comum">
-                <span class="pote-chip"></span>
-                <span class="pote-chip"></span>
-                <span class="pote-chip"></span>
-                <span class="pote-chip"></span>
-              </div>
-              <div class="pote-grupo" data-para="voce" hidden>
-                <span class="pote-chip"></span>
-                <span class="pote-chip"></span>
-              </div>
-              <div class="pote-grupo" data-para="adversarioA" hidden>
-                <span class="pote-chip"></span>
-                <span class="pote-chip"></span>
-              </div>
-              <div class="pote-grupo" data-para="adversarioB" hidden>
-                <span class="pote-chip"></span>
-                <span class="pote-chip"></span>
-              </div>
+          <div class="assento assento--heroi" data-seat="voce">
+            <div class="holes">
+              <div class="hole-slot" data-hole="0"></div>
+              <div class="hole-slot" data-hole="1"></div>
             </div>
-
-            <div class="board" aria-label="Cartas comunitarias">
-              <div class="slot" data-slot="1"></div>
-              <div class="slot" data-slot="2"></div>
-              <div class="slot" data-slot="3"></div>
-              <div class="slot" data-slot="4"></div>
-              <div class="slot" data-slot="5"></div>
-            </div>
-            <div class="burn-area" data-burn></div>
-
-            <div class="assento assento--heroi" data-seat="voce">
-              <div class="holes">
-                <div class="hole-slot" data-hole="0"></div>
-                <div class="hole-slot" data-hole="1"></div>
-              </div>
-              <div class="ident">
-                <img
-                  class="avatar"
-                  src="assets/avatares/voce.svg"
-                  alt="Ficha ilustrada de Voce"
-                  width="64"
-                  height="64"
-                />
-                <div>
-                  <p class="apelido">Voc&#234;</p>
-                  <div class="stack" aria-hidden="true">
-                    <span class="ficha"></span>
-                    <span class="ficha"></span>
-                    <span class="ficha"></span>
-                  </div>
+            <div class="ident">
+              <img
+                class="avatar"
+                src="assets/avatares/voce.svg"
+                alt="Ficha ilustrada de Voce"
+                width="64"
+                height="64"
+              />
+              <div>
+                <p class="apelido">Voc&#234;</p>
+                <div class="stack" aria-hidden="true">
+                  <span class="ficha"></span>
+                  <span class="ficha"></span>
+                  <span class="ficha"></span>
                 </div>
               </div>
             </div>
@@ -137,13 +141,15 @@
         id="hud"
         data-hud-estado="ociosa"
         aria-live="polite"
+        role="region"
+        aria-label="Pergunta da mesa"
       >
         <p class="hud__linha">Treine ler as m&#227;os. Sem apostas.</p>
         <div class="hud__acoes">
           <button type="button" class="btn btn--cta" data-cta="Nova m&#227;o">Nova m&#227;o</button>
         </div>
       </div>
-    </div>
+    </main>
     <script type="module" src="js/mesa.js"></script>
   </body>
 </html>
