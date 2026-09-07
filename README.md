@@ -41,17 +41,23 @@ Sem bundler, sem framework, sem servidor de aplicação. Ver [ADRs](docs/adr/) p
 
 ## Desenvolvimento local
 
-O projeto usa ES modules e Web Audio — **não abra `index.html` via `file://`**. Use um servidor estático local:
+O projeto usa ES modules e Web Audio — **não abra `index.html` via `file://`** (módulos e áudio não são modo suportado nesse protocolo). Use um servidor HTTP local na raiz do repositório:
 
 ```bash
-# Exemplo com Python
+# Python
 python -m http.server 8080
 
-# Exemplo com Node (npx)
+# Node (npx)
 npx serve .
 ```
 
-Depois acesse `http://localhost:8080` (ou a porta equivalente).
+Depois acesse `http://localhost:8080`. Viewport de referência desktop: **1280×720** pixels CSS (DevTools). Abaixo disso o HUD pode empilhar; as cartas permanecem legíveis.
+
+Testes de contrato da FSM (Node 18+, sem bundler):
+
+```bash
+node --test tests/contract/*.test.js
+```
 
 ## Deploy
 
@@ -59,7 +65,7 @@ Publicação prevista via **GitHub Pages** a partir da branch `main`. Detalhes e
 
 ## Privacidade
 
-Não há cadastro, login nem envio de dados a servidor. Apenas contadores de desempenho de treino ficam no `localStorage` do navegador. Limpar os dados do site apaga a evolução.
+Não há cadastro, login nem envio de dados a servidor. Avatares e apelidos (**Você**, **Adversário A**, **Adversário B**) são de produto, não de cadastro. A sessão da mesa vive só em memória (recarregar volta à mesa ociosa). Contadores de evolução, quando existirem, ficarão no `localStorage` da origem — esta etapa ainda não grava chaves. Limpar os dados do site apaga a evolução futura.
 
 ## Licença
 

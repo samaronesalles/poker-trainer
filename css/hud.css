@@ -1,0 +1,157 @@
+/* HUD barra de aùùo ù fundo escuro translùcido, alvos grandes, :focus-visible. */
+
+.hud {
+  flex: 0 0 auto;
+  min-height: 148px;
+  margin: 0.55rem 1rem 0.7rem;
+  padding: 0.85rem 1.1rem 1rem;
+  border-radius: 14px 14px 8px 8px;
+  background: linear-gradient(180deg, rgba(16, 18, 24, 0.92), rgba(8, 9, 12, 0.96));
+  border: 1px solid rgba(196, 165, 116, 0.22);
+  box-shadow:
+    0 -8px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #f3ead6;
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+}
+
+.hud:focus {
+  outline: none;
+}
+
+.hud__linha {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.hud__feedback {
+  min-height: 1.25rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.hud__feedback[data-kind='acerto'] {
+  color: #b7e0c2;
+}
+
+.hud__feedback[data-kind='erro'] {
+  color: #f0b4a8;
+}
+
+.hud__resultado {
+  margin: 0 0 0.7rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.hud__resultado p {
+  margin: 0;
+}
+
+.hud__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.hud__opcoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.btn {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+  min-height: 48px;
+  padding: 0.55rem 1.1rem;
+  color: #f3ead6;
+  background: #1c2230;
+  border: 1px solid rgba(196, 165, 116, 0.35);
+  letter-spacing: 0.02em;
+}
+
+.btn:hover:not(:disabled) {
+  background: #262e40;
+  border-color: #c4a574;
+}
+
+.btn:focus {
+  outline: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #e8d6a0;
+  outline-offset: 3px;
+}
+
+.btn:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.btn--cta {
+  background: linear-gradient(180deg, #c4a574, #8d6b32);
+  color: #1a1208;
+  border-color: #e8d6a0;
+  font-weight: 800;
+  min-width: 10rem;
+  font-size: 1.05rem;
+}
+
+.btn--cta:hover:not(:disabled) {
+  background: linear-gradient(180deg, #e0c48a, #a07a38);
+  color: #1a1208;
+}
+
+.btn--opcao[data-estado='correto'] {
+  background: #1e4a32;
+  border-color: #7dcaa0;
+  color: #e8fff2;
+}
+
+.btn--opcao[data-estado='errado_desabilitado'] {
+  background: #3a1c1c;
+  border-color: #8a4444;
+  opacity: 0.55;
+}
+
+.hud[data-hud-estado='deal'] .hud__linha {
+  color: rgba(243, 234, 214, 0.55);
+}
+
+.hud--flash-acerto {
+  box-shadow: 0 0 0 1px #7dcaa0, 0 -8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.hud--flash-erro {
+  box-shadow: 0 0 0 1px #c07070, 0 -8px 30px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 900px) {
+  .hud {
+    margin: 0.4rem 0.5rem 0.6rem;
+    min-height: 0;
+  }
+
+  .hud__opcoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .btn--cta {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud,
+  .btn {
+    transition: none;
+  }
+}

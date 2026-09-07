@@ -36,9 +36,9 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Estrutura do site estático e bootstrap ES module, sem backend e sem bundler
 
-- [ ] T001 Create directory structure `css/`, `js/`, `assets/avatares/`, `tests/contract/` at repository root per plan.md
-- [ ] T002 Create minimal `package.json` with only `"type": "module"` (no runtime dependencies, no bundler scripts) so `node --test` can import ES modules
-- [ ] T003 Create `index.html` shell (`lang="pt-BR"`, viewport, dark full-page, `script type="module"` pointing at `js/mesa.js`, no SPA router, no `file://` as supported mode)
+- [X] T001 Create directory structure `css/`, `js/`, `assets/avatares/`, `tests/contract/` at repository root per plan.md
+- [X] T002 Create minimal `package.json` with only `"type": "module"` (no runtime dependencies, no bundler scripts) so `node --test` can import ES modules
+- [X] T003 Create `index.html` shell (`lang="pt-BR"`, viewport, dark full-page, `script type="module"` pointing at `js/mesa.js`, no SPA router, no `file://` as supported mode)
 
 ---
 
@@ -48,14 +48,14 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **⚠️ CRITICAL**: Nenhuma user story pode começar até esta fase estar completa
 
-- [ ] T004 [P] Create club visual tokens (deep felt green, dark rail, center spotlight, chrome-less page) in `css/mesa.css`
-- [ ] T005 [P] Create card face/back/empty slot skeleton (no deal animation yet; no Unicode/emoji deck as primary face) in `css/cartas.css`
-- [ ] T006 [P] Create HUD action-bar skeleton (dark translucent, large targets, `:focus-visible`) in `css/hud.css`
-- [ ] T007 [P] Implement card DOM factory (rank typography, red/black SVG suits, `data-card-role`, `data-face`, `data-rank`, `data-suit`, visibilities `vazia|verso|face`) in `js/carta.js`
-- [ ] T008 [P] Implement fail-open `unlock()` / `play()` stubs (never throw, no mute UI, no MP3/OGG, no microphone) in `js/audio.js` per `specs/001-mesa-imersiva/contracts/audio-failopen.md`
-- [ ] T009 [P] Export stub constants in `js/quiz-stub.js`: RN-014 six-option set (`par` correct), RN-030 winner texts, exact HUD copy, `PassoQuizStub` ids, and `shuffleOpcoes` via `Math.random` (G008 only)
-- [ ] T010 Implement in-memory Mesa/HUD/MaoTreino model and pure FSM transitions (`INICIAR_MAO`, `PROXIMA_MAO`, `CONTINUAR`, `ESCOLHER_OPCAO`, `FIM_ANIMACAO_STREET`, `FALHA_DEAL`) exportable without DOM in `js/mesa.js` (depends on T009); MUST NOT write `localStorage`; MUST NOT create `js/baralho.js`, `js/motor.js`, `js/quiz.js`, `js/storage.js`
-- [ ] T011 Wire `index.html` to load `css/mesa.css`, `css/cartas.css`, `css/hud.css` and boot `js/mesa.js` without touching the DOM at module import time (Node must still import the FSM)
+- [X] T004 [P] Create club visual tokens (deep felt green, dark rail, center spotlight, chrome-less page) in `css/mesa.css`
+- [X] T005 [P] Create card face/back/empty slot skeleton (no deal animation yet; no Unicode/emoji deck as primary face) in `css/cartas.css`
+- [X] T006 [P] Create HUD action-bar skeleton (dark translucent, large targets, `:focus-visible`) in `css/hud.css`
+- [X] T007 [P] Implement card DOM factory (rank typography, red/black SVG suits, `data-card-role`, `data-face`, `data-rank`, `data-suit`, visibilities `vazia|verso|face`) in `js/carta.js`
+- [X] T008 [P] Implement fail-open `unlock()` / `play()` stubs (never throw, no mute UI, no MP3/OGG, no microphone) in `js/audio.js` per `specs/001-mesa-imersiva/contracts/audio-failopen.md`
+- [X] T009 [P] Export stub constants in `js/quiz-stub.js`: RN-014 six-option set (`par` correct), RN-030 winner texts, exact HUD copy, `PassoQuizStub` ids, and `shuffleOpcoes` via `Math.random` (G008 only)
+- [X] T010 Implement in-memory Mesa/HUD/MaoTreino model and pure FSM transitions (`INICIAR_MAO`, `PROXIMA_MAO`, `CONTINUAR`, `ESCOLHER_OPCAO`, `FIM_ANIMACAO_STREET`, `FALHA_DEAL`) exportable without DOM in `js/mesa.js` (depends on T009); MUST NOT write `localStorage`; MUST NOT create `js/baralho.js`, `js/motor.js`, `js/quiz.js`, `js/storage.js`
+- [X] T011 Wire `index.html` to load `css/mesa.css`, `css/cartas.css`, `css/hud.css` and boot `js/mesa.js` without touching the DOM at module import time (Node must still import the FSM)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -71,17 +71,17 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T012 [US1] Write FSM contract test for initial state `ociosa` (CTA Nova mão, 0 opções, purpose line) in `tests/contract/hud-session.test.js` (hud-session.md §8 caso 1)
+- [X] T012 [US1] Write FSM contract test for initial state `ociosa` (CTA Nova mão, 0 opções, purpose line) in `tests/contract/hud-session.test.js` (hud-session.md §8 caso 1)
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Markup the single-table shell (felt oval region, three `data-seat` positions, five `data-slot` placeholders, scenic pot, HUD root) in `index.html`
-- [ ] T014 [P] [US1] Create product-only illustrated SVG avatars (MUST NOT real-person photos, MUST NOT user upload) in `assets/avatares/voce.svg`, `assets/avatares/adversario-a.svg`, `assets/avatares/adversario-b.svg`
-- [ ] T015 [US1] Style felt, rail, crease, center spotlight, hero-larger bottom seat, opponent seats, decorative stacks and pot in `css/mesa.css` (FR-017, FR-019)
-- [ ] T016 [US1] Bind avatars and exact nicknames **Você**, **Adversário A**, **Adversário B** into seats in `index.html` (no name input field)
-- [ ] T017 [US1] Render HUD `ociosa` with exact copy “Treine ler as mãos. Sem apostas.” and CTA **Nova mão**, 0 quiz options, no betting/fold/timer/dealer chrome in `css/hud.css` and `js/mesa.js` (FR-003, FR-011, FR-012)
-- [ ] T018 [US1] Make **Nova mão** reachable by Tab and activatable with Enter/Space with visible focus in `css/hud.css` and `js/mesa.js` (SC-011)
-- [ ] T019 [US1] Initialize session on load/reload as `hud.estado=ociosa`, `mao=null`, `indiceMaoSessao=0` with zero `localStorage`/cookie writes in `js/mesa.js` (FR-016, FR-025)
+- [X] T013 [US1] Markup the single-table shell (felt oval region, three `data-seat` positions, five `data-slot` placeholders, scenic pot, HUD root) in `index.html`
+- [X] T014 [P] [US1] Create product-only illustrated SVG avatars (MUST NOT real-person photos, MUST NOT user upload) in `assets/avatares/voce.svg`, `assets/avatares/adversario-a.svg`, `assets/avatares/adversario-b.svg`
+- [X] T015 [US1] Style felt, rail, crease, center spotlight, hero-larger bottom seat, opponent seats, decorative stacks and pot in `css/mesa.css` (FR-017, FR-019)
+- [X] T016 [US1] Bind avatars and exact nicknames **Você**, **Adversário A**, **Adversário B** into seats in `index.html` (no name input field)
+- [X] T017 [US1] Render HUD `ociosa` with exact copy “Treine ler as mãos. Sem apostas.” and CTA **Nova mão**, 0 quiz options, no betting/fold/timer/dealer chrome in `css/hud.css` and `js/mesa.js` (FR-003, FR-011, FR-012)
+- [X] T018 [US1] Make **Nova mão** reachable by Tab and activatable with Enter/Space with visible focus in `css/hud.css` and `js/mesa.js` (SC-011)
+- [X] T019 [US1] Initialize session on load/reload as `hud.estado=ociosa`, `mao=null`, `indiceMaoSessao=0` with zero `localStorage`/cookie writes in `js/mesa.js` (FR-016, FR-025)
 
 **Checkpoint**: User Story 1 fully functional and independently testable (tela ociosa CA-001 / SC-001)
 
@@ -95,15 +95,15 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 2
 
-- [ ] T020 [US2] Extend FSM contract tests in `tests/contract/hud-session.test.js`: `INICIAR_MAO` → `deal` with 0 options; empty board after holes landed stays out of `perguntando`; `FALHA_DEAL` → `ociosa` (hud-session.md §8 casos 2, 3, 14)
+- [X] T020 [US2] Extend FSM contract tests in `tests/contract/hud-session.test.js`: `INICIAR_MAO` → `deal` with 0 options; empty board after holes landed stays out of `perguntando`; `FALHA_DEAL` → `ociosa` (hud-session.md §8 casos 2, 3, 14)
 
 ### Implementation for User Story 2
 
-- [ ] T021 [P] [US2] Define 11 distinct stub game faces (6 hole + 5 community) without Fisher–Yates/Web Crypto/ADR-004 in `js/carta.js` (or a stub deck helper exported from `js/quiz-stub.js` if kept in one module)
-- [ ] T022 [US2] Implement hole-card deal fan/slide animation and HUD `deal` (0 clickable options while `animando`) in `css/cartas.css`, `js/carta.js`, and `js/mesa.js` (CA-026)
-- [ ] T023 [US2] Handle **Nova mão**: best-effort `unlock()` from `js/audio.js`, increment `indiceMaoSessao`, enter `deal`, hide session CTAs during `deal` in `js/mesa.js`
-- [ ] T024 [US2] After holes land with empty board, keep HUD out of `perguntando` (RN-041) and omit **Desistir** / mid-hand **Nova mão** from `index.html` and `js/mesa.js` (RN-042)
-- [ ] T025 [US2] On deal start failure, transition FSM to `ociosa` + **Nova mão** (`FALHA_DEAL`) in `js/mesa.js`
+- [X] T021 [P] [US2] Define 11 distinct stub game faces (6 hole + 5 community) without Fisher–Yates/Web Crypto/ADR-004 in `js/carta.js` (or a stub deck helper exported from `js/quiz-stub.js` if kept in one module)
+- [X] T022 [US2] Implement hole-card deal fan/slide animation and HUD `deal` (0 clickable options while `animando`) in `css/cartas.css`, `js/carta.js`, and `js/mesa.js` (CA-026)
+- [X] T023 [US2] Handle **Nova mão**: best-effort `unlock()` from `js/audio.js`, increment `indiceMaoSessao`, enter `deal`, hide session CTAs during `deal` in `js/mesa.js`
+- [X] T024 [US2] After holes land with empty board, keep HUD out of `perguntando` (RN-041) and omit **Desistir** / mid-hand **Nova mão** from `index.html` and `js/mesa.js` (RN-042)
+- [X] T025 [US2] On deal start failure, transition FSM to `ociosa` + **Nova mão** (`FALHA_DEAL`) in `js/mesa.js`
 
 **Checkpoint**: User Stories 1 AND 2 independently testable (deal sem preflop)
 
@@ -117,15 +117,15 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 3
 
-- [ ] T026 [US3] Extend FSM contract tests in `tests/contract/hud-session.test.js`: river landed without opponent flip stays `deal`; flip complete → `perguntando` `river_hero` only (hud-session.md §8 casos 9–10)
+- [X] T026 [US3] Extend FSM contract tests in `tests/contract/hud-session.test.js`: river landed without opponent flip stays `deal`; flip complete → `perguntando` `river_hero` only (hud-session.md §8 casos 9–10)
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Apply hole visibility rules after deal land: `voce` face-up, `adversarioA`/`adversarioB` face-down through flop/turn in `js/mesa.js` and `js/carta.js`
-- [ ] T028 [US3] Deal flop into `data-slot` 1–3 in rapid sequence and keep unused slots visible-empty in `js/mesa.js`, `css/cartas.css`, and `index.html` (FR-020)
-- [ ] T029 [US3] Add scenic burn on turn/river (verso theatrical, not in slots 1–5, not consuming the 11 stub game cards) then place the street card in slot 4 or 5 in `js/carta.js`, `js/mesa.js`, and `css/cartas.css` (RN-G007)
-- [ ] T030 [US3] Implement showdown order in `js/mesa.js`: river lands in slot 5 → flip A/B in place → set `viradaShowdownConcluida` before leaving `deal` (FR-005)
-- [ ] T031 [US3] Keep HUD in `deal` with 0 clickable options until street cards have landed and, on river, the opponent flip has finished in `js/mesa.js` (CA-026)
+- [X] T027 [US3] Apply hole visibility rules after deal land: `voce` face-up, `adversarioA`/`adversarioB` face-down through flop/turn in `js/mesa.js` and `js/carta.js`
+- [X] T028 [US3] Deal flop into `data-slot` 1–3 in rapid sequence and keep unused slots visible-empty in `js/mesa.js`, `css/cartas.css`, and `index.html` (FR-020)
+- [X] T029 [US3] Add scenic burn on turn/river (verso theatrical, not in slots 1–5, not consuming the 11 stub game cards) then place the street card in slot 4 or 5 in `js/carta.js`, `js/mesa.js`, and `css/cartas.css` (RN-G007)
+- [X] T030 [US3] Implement showdown order in `js/mesa.js`: river lands in slot 5 → flip A/B in place → set `viradaShowdownConcluida` before leaving `deal` (FR-005)
+- [X] T031 [US3] Keep HUD in `deal` with 0 clickable options until street cards have landed and, on river, the opponent flip has finished in `js/mesa.js` (CA-026)
 
 **Checkpoint**: User Stories 1–3 independently testable (contrato visual de Hold’em)
 
@@ -139,16 +139,16 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 4
 
-- [ ] T032 [US4] Extend FSM contract tests in `tests/contract/hud-session.test.js`: flop_hero 6 options with correct `par`; wrong stay + disable; `par` → `sem_upgrade`; Continuar → `deal` turn; turn skip → `deal` river; river A → B → winner one-at-a-time (hud-session.md §8 casos 4–8, 11)
+- [X] T032 [US4] Extend FSM contract tests in `tests/contract/hud-session.test.js`: flop_hero 6 options with correct `par`; wrong stay + disable; `par` → `sem_upgrade`; Continuar → `deal` turn; turn skip → `deal` river; river A → B → winner one-at-a-time (hud-session.md §8 casos 4–8, 11)
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Render `perguntando` as table HUD (not white form, not `alert()`): exact enunciados, up to 6 large option buttons, visual states `padrao|hover|foco|selecionado|correto|errado_desabilitado` in `css/hud.css` and `js/mesa.js` (FR-012, FR-021)
-- [ ] T034 [US4] Implement stub grading in `js/quiz-stub.js` and `js/mesa.js`: exactly one correct id; wrong shows “Não é essa. Tente de novo.” and disables that option; correct shows “Você acertou” and advances; never reveal the answer in text; shuffle visual order each prompt (RN-G005, RN-G008)
-- [ ] T035 [US4] After `flop_hero`/`turn_hero` correct, enter `sem_upgrade` with exact text “Não há upgrade possível.” and CTA **Continuar**; Continuar opens the next street in `deal` in `js/mesa.js` (FR-011, FR-013)
-- [ ] T036 [US4] Implement river four sequential `perguntando` steps (você → A → B → quem ganhou) then `resultado` with winner, three identified categories (stub “Par”), and CTA **Próxima mão** in `js/mesa.js` and `css/hud.css` (RN-G001, FR-011)
-- [ ] T037 [US4] Implement HUD keyboard cycle (options LTR/TTB then the state CTA; Enter/Space activate; do not park focus on disabled controls) in `js/mesa.js` and `css/hud.css` (FR-021, SC-011)
-- [ ] T038 [US4] Enable quiz only after `FIM_ANIMACAO_STREET`, reduced-motion cut, or safety timeout (2 s first session hand, ≈ 1 s afterwards) in `js/mesa.js` (SC-002, SC-010)
+- [X] T033 [US4] Render `perguntando` as table HUD (not white form, not `alert()`): exact enunciados, up to 6 large option buttons, visual states `padrao|hover|foco|selecionado|correto|errado_desabilitado` in `css/hud.css` and `js/mesa.js` (FR-012, FR-021)
+- [X] T034 [US4] Implement stub grading in `js/quiz-stub.js` and `js/mesa.js`: exactly one correct id; wrong shows “Não é essa. Tente de novo.” and disables that option; correct shows “Você acertou” and advances; never reveal the answer in text; shuffle visual order each prompt (RN-G005, RN-G008)
+- [X] T035 [US4] After `flop_hero`/`turn_hero` correct, enter `sem_upgrade` with exact text “Não há upgrade possível.” and CTA **Continuar**; Continuar opens the next street in `deal` in `js/mesa.js` (FR-011, FR-013)
+- [X] T036 [US4] Implement river four sequential `perguntando` steps (você → A → B → quem ganhou) then `resultado` with winner, three identified categories (stub “Par”), and CTA **Próxima mão** in `js/mesa.js` and `css/hud.css` (RN-G001, FR-011)
+- [X] T037 [US4] Implement HUD keyboard cycle (options LTR/TTB then the state CTA; Enter/Space activate; do not park focus on disabled controls) in `js/mesa.js` and `css/hud.css` (FR-021, SC-011)
+- [X] T038 [US4] Enable quiz only after `FIM_ANIMACAO_STREET`, reduced-motion cut, or safety timeout (2 s first session hand, ≈ 1 s afterwards) in `js/mesa.js` (SC-002, SC-010)
 
 **Checkpoint**: User Stories 1–4 independently testable (cinco estados do HUD percorríveis só com o casco)
 
@@ -162,14 +162,14 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 5
 
-- [ ] T039 [US5] Extend FSM contract tests in `tests/contract/hud-session.test.js`: hand 1 winner `voce` → `resultado` non-split + Próxima mão; hand 2+ winner `voce_a` → `resultado` split (hud-session.md §8 casos 12–13)
+- [X] T039 [US5] Extend FSM contract tests in `tests/contract/hud-session.test.js`: hand 1 winner `voce` → `resultado` non-split + Próxima mão; hand 2+ winner `voce_a` → `resultado` split (hud-session.md §8 casos 12–13)
 
 ### Implementation for User Story 5
 
-- [ ] T040 [US5] Animate scenic pot `para_vencedor` toward seat **Você** on hand 1 resultado in `css/mesa.css` and `js/mesa.js` (FR-003)
-- [ ] T041 [US5] Animate scenic pot `split` between **Você** and **Adversário A** on hand 2+ without bb/accounting in `css/mesa.css` and `js/mesa.js` (RN-G003 visual)
-- [ ] T042 [US5] Implement **Próxima mão**: collect cards, same `Mesa`, new deal, no perceptible reload, no preflop quiz, increment `indiceMaoSessao`, best-effort audio unlock in `js/mesa.js` and `css/cartas.css` (FR-015, SC-006)
-- [ ] T043 [US5] Enforce CTA names only **Nova mão** / **Próxima mão** / **Continuar** (MUST NOT **Embaralhar**, **Desistir**, mid-hand **Nova mão**) in `index.html`, `js/mesa.js`, and `css/hud.css` (FR-009, FR-010, SC-009)
+- [X] T040 [US5] Animate scenic pot `para_vencedor` toward seat **Você** on hand 1 resultado in `css/mesa.css` and `js/mesa.js` (FR-003)
+- [X] T041 [US5] Animate scenic pot `split` between **Você** and **Adversário A** on hand 2+ without bb/accounting in `css/mesa.css` and `js/mesa.js` (RN-G003 visual)
+- [X] T042 [US5] Implement **Próxima mão**: collect cards, same `Mesa`, new deal, no perceptible reload, no preflop quiz, increment `indiceMaoSessao`, best-effort audio unlock in `js/mesa.js` and `css/cartas.css` (FR-015, SC-006)
+- [X] T043 [US5] Enforce CTA names only **Nova mão** / **Próxima mão** / **Continuar** (MUST NOT **Embaralhar**, **Desistir**, mid-hand **Nova mão**) in `index.html`, `js/mesa.js`, and `css/hud.css` (FR-009, FR-010, SC-009)
 
 **Checkpoint**: User Stories 1–5 independently testable (ciclo de sessão encadeável)
 
@@ -183,15 +183,15 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 6
 
-- [ ] T044 [P] [US6] Write fail-open contract tests for missing/rejected `AudioContext` (`unlock`/`play` never throw, no mute export) in `tests/contract/audio-failopen.test.js`
+- [X] T044 [P] [US6] Write fail-open contract tests for missing/rejected `AudioContext` (`unlock`/`play` never throw, no mute export) in `tests/contract/audio-failopen.test.js`
 
 ### Implementation for User Story 6
 
-- [ ] T045 [US6] Implement synthesized one-shots (`shuffle`, `deal`, `flop`, `showdown`, `acerto`, `erro`) with oscillator/filtered noise, low mix, no BGM, no samples in `js/audio.js` (ADR-007)
-- [ ] T046 [US6] Call `unlock()` on first **Nova mão** / **Próxima mão** and `play()` on table events from `js/mesa.js` without blocking the deal on audio (constitution VII)
-- [ ] T047 [US6] Honor `prefers-reduced-motion: reduce` with instant-seated cards (0 s flight) and HUD treating them as landed in `css/cartas.css` and `js/mesa.js`; sound MAY continue
-- [ ] T048 [US6] Fit felt + 3 seats + 5 slots + HUD at 1280×720 CSS px and stack HUD below on narrow viewports without unreadable overlapping cards in `css/mesa.css` and `css/hud.css` (FR-007, SC-008)
-- [ ] T049 [US6] Ensure no mute/volume control and no aggressive audio modal/`alert()`/`confirm()`/`prompt()` in `index.html`, `js/audio.js`, and `js/mesa.js` (FR-023, FR-024)
+- [X] T045 [US6] Implement synthesized one-shots (`shuffle`, `deal`, `flop`, `showdown`, `acerto`, `erro`) with oscillator/filtered noise, low mix, no BGM, no samples in `js/audio.js` (ADR-007)
+- [X] T046 [US6] Call `unlock()` on first **Nova mão** / **Próxima mão** and `play()` on table events from `js/mesa.js` without blocking the deal on audio (constitution VII)
+- [X] T047 [US6] Honor `prefers-reduced-motion: reduce` with instant-seated cards (0 s flight) and HUD treating them as landed in `css/cartas.css` and `js/mesa.js`; sound MAY continue
+- [X] T048 [US6] Fit felt + 3 seats + 5 slots + HUD at 1280×720 CSS px and stack HUD below on narrow viewports without unreadable overlapping cards in `css/mesa.css` and `css/hud.css` (FR-007, SC-008)
+- [X] T049 [US6] Ensure no mute/volume control and no aggressive audio modal/`alert()`/`confirm()`/`prompt()` in `index.html`, `js/audio.js`, and `js/mesa.js` (FR-023, FR-024)
 
 **Checkpoint**: All user stories independently functional (casco completo + fail-open + desktop-first)
 
@@ -201,11 +201,11 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Validação ponta a ponta, privacidade e guarda de escopo negativo
 
-- [ ] T050 Run `node --test tests/contract/` and close any FSM gaps against `specs/001-mesa-imersiva/contracts/hud-session.md` §8
-- [ ] T051 [P] Update serve/`file://` warning and local HTTP instructions in `README.md` (python `-m http.server` or `npx serve`, viewport 1280×720)
-- [ ] T052 Execute manual quickstart scenarios S1–S10 from `specs/001-mesa-imersiva/quickstart.md` against `http://localhost:8080` (do not implement 002–006 behavior)
-- [ ] T053 Audit DevTools Application plus source: zero evolution `localStorage` keys, zero PII fields, zero telemetry, avatars/nicknames are product-only in `js/mesa.js`, `index.html`, and `js/audio.js` (FR-025, Principle II)
-- [ ] T054 Confirm negative scope: no `js/baralho.js`/`js/motor.js`/`js/quiz.js`/`js/storage.js`, no betting UI, no report/mute/zerar, pt-BR copy matches hud-session.md §2, street animation caps 2 s / ≈ 1 s in `js/mesa.js` and `css/cartas.css`
+- [X] T050 Run `node --test tests/contract/` and close any FSM gaps against `specs/001-mesa-imersiva/contracts/hud-session.md` §8
+- [X] T051 [P] Update serve/`file://` warning and local HTTP instructions in `README.md` (python `-m http.server` or `npx serve`, viewport 1280×720)
+- [X] T052 Execute manual quickstart scenarios S1–S10 from `specs/001-mesa-imersiva/quickstart.md` against `http://localhost:8080` (do not implement 002–006 behavior)
+- [X] T053 Audit DevTools Application plus source: zero evolution `localStorage` keys, zero PII fields, zero telemetry, avatars/nicknames are product-only in `js/mesa.js`, `index.html`, and `js/audio.js` (FR-025, Principle II)
+- [X] T054 Confirm negative scope: no `js/baralho.js`/`js/motor.js`/`js/quiz.js`/`js/storage.js`, no betting UI, no report/mute/zerar, pt-BR copy matches hud-session.md §2, street animation caps 2 s / ≈ 1 s in `js/mesa.js` and `css/cartas.css`
 
 ---
 

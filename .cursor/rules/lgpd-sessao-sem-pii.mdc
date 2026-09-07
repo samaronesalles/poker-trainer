@@ -1,0 +1,38 @@
+---
+description: Sessão da mesa sem PII, sem cadastro e sem persistência nesta feature
+globs: index.html,js/**/*.js,css/**/*.css
+alwaysApply: true
+---
+
+# LGPD — Sessão local sem dado pessoal
+
+## Contexto
+A feature 001 (mesa imersiva) opera um treino single-player no navegador. Apelidos e avatares são de produto. Recarregar aborta a mão. Evolução em `localStorage` é de feature posterior.
+
+## Artigo(s) LGPD aplicável(is)
+- Art. 6º, III (necessidade): não coletar o que o treino não precisa.
+- Art. 6º, VIII (prevenção) e Art. 46 §2º (privacy by design).
+- Art. 5º, I: dado pessoal é o que identifica pessoa natural — apelido digitado, foto real e identificadores persistidos entram nessa categoria.
+
+## Regra
+NUNCA peça, armazene ou envie CPF, e-mail, nome real, apelido digitado, telefone, foto de pessoa ou qualquer identificador.
+NUNCA escreva `localStorage` / cookies / fingerprint nesta etapa da mesa.
+SEMPRE use os apelidos fixos **Você**, **Adversário A**, **Adversário B** e avatares ilustrados (ficha de personagem), nunca foto real nem upload.
+
+## Exemplo INCORRETO
+```js
+const nome = prompt('Seu apelido na mesa');
+localStorage.setItem('jogador', nome);
+```
+
+## Exemplo CORRETO
+```js
+const APELIDOS = { voce: 'Você', adversarioA: 'Adversário A', adversarioB: 'Adversário B' };
+// estado só em memória; reload ? ociosa
+```
+
+## Quando esta rule NÃO se aplica
+- Feature 003 poderá persistir **somente** contadores de treino (`mao_atual`, `upgrade`, `vencedor_pote`) no `localStorage` da origem, sem PII, com fail-open. Ainda assim, sem cadastro e sem envio a servidor.
+
+## Histórico
+- Criada ao implementar o casco da mesa (feature 001-mesa-imersiva).

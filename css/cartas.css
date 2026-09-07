@@ -1,0 +1,186 @@
+/* Cartas HTML/CSS + naipes SVG. Sem Unicode/emoji de baralho como face. */
+
+.carta {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  perspective: 600px;
+  z-index: 1;
+}
+
+.carta--vazia {
+  display: none;
+}
+
+.carta__inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 7px;
+}
+
+.carta[data-face='down'] .carta__inner,
+.carta[data-card-role='burn'] .carta__inner {
+  transform: rotateY(180deg);
+}
+
+.carta[data-face='up'] .carta__inner {
+  transform: rotateY(0deg);
+}
+
+.carta__face,
+.carta__back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 7px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.carta__face {
+  background: linear-gradient(180deg, #fffcf6 0%, #f3ead8 100%);
+  color: #141414;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 0.18rem 0.22rem;
+  font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  font-weight: 700;
+}
+
+.carta__face[data-color='vermelho'] {
+  color: #c41e3a;
+}
+
+.carta__face[data-color='preto'] {
+  color: #141414;
+}
+
+.carta__index {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  width: 1.1em;
+}
+
+.carta__index--br {
+  justify-self: end;
+  transform: rotate(180deg);
+}
+
+.carta__rank {
+  font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+  letter-spacing: -0.03em;
+}
+
+.carta__suit {
+  width: 0.72em;
+  height: 0.72em;
+  display: block;
+}
+
+.carta__pip {
+  display: grid;
+  place-items: center;
+}
+
+.carta__pip .carta__suit {
+  width: 1.55em;
+  height: 1.55em;
+}
+
+.carta__back {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(196, 165, 116, 0.25), transparent 40%),
+    repeating-linear-gradient(135deg, #18233c 0 7px, #223154 7px 14px);
+  transform: rotateY(180deg);
+  overflow: hidden;
+}
+
+.carta__back-pattern {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(196, 165, 116, 0.45);
+  border-radius: 4px;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(196, 165, 116, 0.14) 0 2px,
+      transparent 2px 8px
+    );
+}
+
+.carta__back-diamond {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border: 2px solid #c4a574;
+  box-shadow: 0 0 0 3px rgba(24, 35, 60, 0.6);
+}
+
+.carta--voando {
+  animation: deal-fly var(--deal-ms, 700ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 6;
+}
+
+.carta--recolher {
+  animation: collect-fly var(--deal-ms, 500ms) cubic-bezier(0.64, 0, 0.78, 0) both;
+}
+
+.carta[data-card-role='burn'] {
+  animation: burn-in 0.35s ease-out both;
+}
+
+@keyframes deal-fly {
+  from {
+    transform: translate(var(--from-x, 0), var(--from-y, -40px)) rotate(-14deg);
+    opacity: 0.55;
+  }
+  to {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes collect-fly {
+  to {
+    transform: translate(var(--to-x, 0), var(--to-y, -80px)) scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes burn-in {
+  from {
+    transform: translateY(-12px) rotate(-18deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-18deg);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carta--voando,
+  .carta--recolher,
+  .carta[data-card-role='burn'],
+  .carta__inner {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .carta[data-face='down'] .carta__inner,
+  .carta[data-card-role='burn'] .carta__inner {
+    transform: rotateY(180deg);
+  }
+
+  .carta[data-face='up'] .carta__inner {
+    transform: rotateY(0deg);
+  }
+}
