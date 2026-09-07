@@ -124,6 +124,38 @@
   box-shadow: 0 0 0 3px rgba(24, 35, 60, 0.6);
 }
 
+.carta--exemplo {
+  pointer-events: none;
+}
+
+.carta--exemplo .carta__rank {
+  font-size: 0.52rem;
+}
+
+.carta--exemplo .carta__suit {
+  width: 0.5em;
+  height: 0.5em;
+}
+
+.carta--exemplo .carta__pip,
+.carta--exemplo .carta__index--br {
+  display: none;
+}
+
+.carta--exemplo .carta__face {
+  padding: 0.06rem 0.05rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.carta--esmaecida {
+  opacity: 0.36;
+  filter: saturate(0.65);
+}
+
+.carta--esmaecida .carta__face {
+  box-shadow: none;
+}
+
 .carta[data-vencedora='true'] .carta__face {
   box-shadow:
     0 0 0 2px #e8d6a0,

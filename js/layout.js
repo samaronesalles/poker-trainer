@@ -16,6 +16,10 @@ export const ROTULOS_POTE_CURTOS = Object.freeze({
   tres: 'Os três',
 });
 
+export function colinhaExisteNoViewport({ width } = {}) {
+  return Number(width) > 900;
+}
+
 export function composicaoDoViewport({ width, height } = {}) {
   const w = Number(width);
   const h = Number(height);
