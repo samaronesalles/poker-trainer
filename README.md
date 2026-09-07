@@ -53,10 +53,10 @@ npx serve .
 
 Depois acesse `http://localhost:8080`. Viewport de referência desktop: **1280×720** pixels CSS (DevTools). Abaixo disso o HUD pode empilhar; as cartas permanecem legíveis.
 
-Testes de contrato (Node 18+, sem bundler): FSM do HUD em `tests/contract/hud-session.test.js`, quiz em `tests/contract/quiz.test.js`, persistência em `tests/contract/storage.test.js`, áudio fail-open e o gerador em `tests/contract/baralho.test.js`. Módulos de domínio: `js/quiz.js` e `js/storage.js`. Sem Playwright.
+Testes de contrato (Node 18+, sem bundler): motor de melhor 5 em `tests/contract/motor.test.js`, FSM do HUD em `tests/contract/hud-session.test.js`, quiz em `tests/contract/quiz.test.js`, persistência em `tests/contract/storage.test.js`, áudio fail-open e o gerador em `tests/contract/baralho.test.js`. Módulos de domínio: `js/motor.js`, `js/quiz.js` e `js/storage.js`. No flop e no turn do herói a certa é a melhor 5 real (não mais o stub Flush). O river do herói e os upgrades continuam stub até as features 006/005. Sem Playwright.
 
 ```bash
-node --test tests/contract/
+node --test tests/contract/*.test.js
 ```
 
 ## Deploy

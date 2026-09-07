@@ -1,4 +1,6 @@
-/** Contrato de pergunta, feedback e 1ª tentativa. Sem motor de mãos. */
+/** Contrato de pergunta, feedback e 1ª tentativa. Motor só em flop_hero / turn_hero. */
+
+import { CATEGORIAS, avaliarMelhor5, conjuntoOpcoesMaoAtual } from './motor.js';
 
 export const COPY = Object.freeze({
   linhaProposito: 'Treine ler as mãos. Sem apostas.',
@@ -94,6 +96,50 @@ function baseOpcao(item, tipo, verdadeira) {
     desabilitada: false,
     marca: 'nenhuma',
     selecionada: false,
+  };
+}
+
+const INDICES_VISIVEIS_HEROI = Object.freeze({
+  [PASSOS.flop_hero]: Object.freeze([4, 5, 6, 7, 8]),
+  [PASSOS.turn_hero]: Object.freeze([4, 5, 6, 7, 8, 9]),
+});
+
+const INDICES_BOARD_STREET = Object.freeze({
+  [PASSOS.flop_hero]: Object.freeze([6, 7, 8]),
+  [PASSOS.turn_hero]: Object.freeze([6, 7, 8, 9]),
+});
+
+function identidadeCarta(carta) {
+  return { rank: carta.rank, naipe: carta.naipe };
+}
+
+export function extrairVisiveisHeroi(cartasJogo, passo) {
+  const indices = INDICES_VISIVEIS_HEROI[passo];
+  if (!indices || !Array.isArray(cartasJogo)) return [];
+  return indices.map((indice) => identidadeCarta(cartasJogo[indice]));
+}
+
+export function extrairBoardStreet(cartasJogo, passo) {
+  const indices = INDICES_BOARD_STREET[passo];
+  if (!indices || !Array.isArray(cartasJogo)) return [];
+  return indices.map((indice) => identidadeCarta(cartasJogo[indice]));
+}
+
+function rotuloCategoria(id) {
+  return CATEGORIAS.find((item) => item.id === id)?.rotulo ?? id;
+}
+
+function criarOpcoesMaoAtual(cartasJogo, passo, rng) {
+  const visiveis = extrairVisiveisHeroi(cartasJogo, passo);
+  const board = extrairBoardStreet(cartasJogo, passo);
+  const melhor = avaliarMelhor5(visiveis);
+  const ids = conjuntoOpcoesMaoAtual({ categoriaId: melhor.categoriaId, board });
+  return {
+    melhor,
+    opcoes: shuffleOpcoes(
+      ids.map((id) => baseOpcao({ id, rotulo: rotuloCategoria(id) }, 'categoria', id === melhor.categoriaId)),
+      rng,
+    ),
   };
 }
 
@@ -215,6 +261,15 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
     sessao.mao.conjuntoCorreto = [...CONJUNTO_UPGRADE_STUB];
     sessao.hud.opcoes = criarOpcoesUpgrade(rng);
     sessao.hud.cta = { nome: COPY.ctaConfirmar };
+    return;
+  }
+
+  if (passo === PASSOS.flop_hero || passo === PASSOS.turn_hero) {
+    const montagem = criarOpcoesMaoAtual(sessao.mao.cartasJogo, passo, rng);
+    sessao.mao.corretaUnica = montagem.melhor.categoriaId;
+    sessao.mao.conjuntoCorreto = [];
+    sessao.hud.opcoes = montagem.opcoes;
+    sessao.hud.cta = null;
     return;
   }
 

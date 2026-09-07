@@ -43,8 +43,8 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Encaixar o módulo de domínio `motor` no site estático já entregue pelas 001–003, sem backend, sem bundler e sem lib de poker
 
-- [ ] T001 Create DOM-free ES module skeleton `js/motor.js` exporting placeholders `CATEGORIAS`, `SEQUENCIAS_LEGAIS`, `avaliarMelhor5(cartas)` and `conjuntoOpcoesMaoAtual({ categoriaId, board })`; MAY import only `RANKS` / `NAIPES` from `js/baralho.js`; MUST NOT import `embaralhar`, mistura, `js/quiz.js`, `js/storage.js`, `js/mesa.js`, `document`, `alert`, or `localStorage`; file header MUST state “melhor 5 + RN-017; sem enumerador; sem quemGanhou”
-- [ ] T002 Confirm `package.json` stays `"type": "module"` with zero runtime dependencies and no bundler/lint/Playwright/poker-lib scripts; confirm `index.html` still loads only `js/mesa.js`; confirm `js/mesa.js` does not import `js/motor.js` and still MUST NOT call `localStorage`; MUST NOT add CSS files for this feature
+- [X] T001 Create DOM-free ES module skeleton `js/motor.js` exporting placeholders `CATEGORIAS`, `SEQUENCIAS_LEGAIS`, `avaliarMelhor5(cartas)` and `conjuntoOpcoesMaoAtual({ categoriaId, board })`; MAY import only `RANKS` / `NAIPES` from `js/baralho.js`; MUST NOT import `embaralhar`, mistura, `js/quiz.js`, `js/storage.js`, `js/mesa.js`, `document`, `alert`, or `localStorage`; file header MUST state “melhor 5 + RN-017; sem enumerador; sem quemGanhou”
+- [X] T002 Confirm `package.json` stays `"type": "module"` with zero runtime dependencies and no bundler/lint/Playwright/poker-lib scripts; confirm `index.html` still loads only `js/mesa.js`; confirm `js/mesa.js` does not import `js/motor.js` and still MUST NOT call `localStorage`; MUST NOT add CSS files for this feature
 
 ---
 
@@ -54,9 +54,9 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **⚠️ CRITICAL**: Nenhuma user story pode começar até esta fase estar completa
 
-- [ ] T003 [P] Export frozen `CATEGORIAS` in `js/motor.js` with the 10 RN-014 ids (`royal_flush` … `carta_alta`), exact pt-BR rótulos, and ordem 1..10 matching `js/storage.js` / `specs/004-mao-atual/data-model.md`; export `SEQUENCIAS_LEGAIS` as the 10 closed rank sets of FR-006 (`A-2-3-4-5` … `10-J-Q-K-A`) per `specs/004-mao-atual/contracts/motor.md` §3
-- [ ] T004 Implement arity guard in `js/motor.js` `avaliarMelhor5(cartas)`: length ∉ {5,6,7} MUST throw (programming error); valid lengths MAY still return a placeholder until US1; `conjuntoOpcoesMaoAtual` MUST accept `{ categoriaId, board }` and return an array (placeholder ok); MUST NOT persist `Melhor5` or `chaveDesempate`
-- [ ] T005 Confirm isolation of `js/motor.js`: no `indexedDB`, `sessionStorage`, `fetch`, `sendBeacon`, Unicode baralho, or poker CDN; MUST NOT treat burn as input; `js/storage.js` and `js/audio.js` stay untouched; cadence comments in `js/mesa.js` remain `flop_hero` → `flop_upgrade`, `turn_hero` → `turn_skip`, river stub 003
+- [X] T003 [P] Export frozen `CATEGORIAS` in `js/motor.js` with the 10 RN-014 ids (`royal_flush` … `carta_alta`), exact pt-BR rótulos, and ordem 1..10 matching `js/storage.js` / `specs/004-mao-atual/data-model.md`; export `SEQUENCIAS_LEGAIS` as the 10 closed rank sets of FR-006 (`A-2-3-4-5` … `10-J-Q-K-A`) per `specs/004-mao-atual/contracts/motor.md` §3
+- [X] T004 Implement arity guard in `js/motor.js` `avaliarMelhor5(cartas)`: length ∉ {5,6,7} MUST throw (programming error); valid lengths MAY still return a placeholder until US1; `conjuntoOpcoesMaoAtual` MUST accept `{ categoriaId, board }` and return an array (placeholder ok); MUST NOT persist `Melhor5` or `chaveDesempate`
+- [X] T005 Confirm isolation of `js/motor.js`: no `indexedDB`, `sessionStorage`, `fetch`, `sendBeacon`, Unicode baralho, or poker CDN; MUST NOT treat burn as input; `js/storage.js` and `js/audio.js` stay untouched; cadence comments in `js/mesa.js` remain `flop_hero` → `flop_upgrade`, `turn_hero` → `turn_skip`, river stub 003
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -72,16 +72,16 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Write contract tests in `tests/contract/motor.test.js` per `specs/004-mao-atual/contracts/motor.md` §6.1, §6.8, §6.16: five cards that form a pair → `categoriaId === 'par'` and `rotulo === 'Par'`; pair of deuces and pair of aces (separate hands) both `par`; `avaliarMelhor5` with length 0/4/8 throws
-- [ ] T007 [P] [US1] Update `tests/contract/quiz.test.js` per `specs/004-mao-atual/contracts/quiz-mao-atual.md` §5.1–5.2, §5.4: helper that builds 11 `cartasJogo` (RN-044) whose hero flop (indices `[4],[5],[6],[7],[8]`) is a pair; after flop pousado, enunciado exactly `Qual mão você tem agora?`; exactly 6 distinct RN-014 rótulos; 0 **Confirmar**; `corretaUnica === 'par'`; first-try acerto → `mao_atual.par` +1 acerto +0 erro; `FIM_BEAT_ACERTO` → `flop_upgrade` not turn; MUST NOT click `flush` blindly on `flop_hero`
-- [ ] T008 [P] [US1] Update helper `ate()` / `acertarUnica` in `tests/contract/hud-session.test.js`: on `flop_hero` and `turn_hero` submit `sessao.mao.corretaUnica` (not hardcoded `flush`); keep `river_hero` stub `flush` and A/B `par`; existing 002 montagem / `FALHA_MONTAGEM` / cartas continuity cases MUST still pass; the `payloadFabrica` flop (10-9-8-7-6 espadas) MUST expect **Straight flush**, not Flush
+- [X] T006 [P] [US1] Write contract tests in `tests/contract/motor.test.js` per `specs/004-mao-atual/contracts/motor.md` §6.1, §6.8, §6.16: five cards that form a pair → `categoriaId === 'par'` and `rotulo === 'Par'`; pair of deuces and pair of aces (separate hands) both `par`; `avaliarMelhor5` with length 0/4/8 throws
+- [X] T007 [P] [US1] Update `tests/contract/quiz.test.js` per `specs/004-mao-atual/contracts/quiz-mao-atual.md` §5.1–5.2, §5.4: helper that builds 11 `cartasJogo` (RN-044) whose hero flop (indices `[4],[5],[6],[7],[8]`) is a pair; after flop pousado, enunciado exactly `Qual mão você tem agora?`; exactly 6 distinct RN-014 rótulos; 0 **Confirmar**; `corretaUnica === 'par'`; first-try acerto → `mao_atual.par` +1 acerto +0 erro; `FIM_BEAT_ACERTO` → `flop_upgrade` not turn; MUST NOT click `flush` blindly on `flop_hero`
+- [X] T008 [P] [US1] Update helper `ate()` / `acertarUnica` in `tests/contract/hud-session.test.js`: on `flop_hero` and `turn_hero` submit `sessao.mao.corretaUnica` (not hardcoded `flush`); keep `river_hero` stub `flush` and A/B `par`; existing 002 montagem / `FALHA_MONTAGEM` / cartas continuity cases MUST still pass; the `payloadFabrica` flop (10-9-8-7-6 espadas) MUST expect **Straight flush**, not Flush
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement `avaliarMelhor5(cartas)` in `js/motor.js`: enumerate all `C(n,5)` (n∈{5,6,7}), score each five with lexicographic `chaveDesempate` `[forcaCategoria 9..0, ...kickers]` per RN-029 / `data-model.md` (wheel topo = 5); recognize royal ≠ SF, wheel legal, wrap illegal via `SEQUENCIAS_LEGAIS`; return `{ cartas, categoriaId, rotulo, chaveDesempate }`; always exactly one category (depends on T003, T004)
-- [ ] T010 [US1] Add `extrairVisiveisHeroi(cartasJogo, passo)` and `extrairBoardStreet(cartasJogo, passo)` in `js/quiz.js` for `flop_hero` → indices `[4],[5],[6],[7],[8]` visíveis and `[6],[7],[8]` board; map to `{ rank, naipe }` only; MUST NOT pass holes of A/B (`[0]..[3]`), river `[10]`, burns, `idVisual`, or `chaveDesempate` (depends on T009)
-- [ ] T011 [US1] Change `apresentarPergunta` in `js/quiz.js` for `PASSOS.flop_hero`: call `avaliarMelhor5` + a minimal `conjuntoOpcoesMaoAtual` (always include `categoriaId`, then fill RN-014 top-down without filtering “ainda possível” until length 6); map ids → `{ id, rotulo }` via `CATEGORIAS`; `shuffleOpcoes` (existing RNG); set `sessao.mao.corretaUnica = melhor.categoriaId`; keep `criarOpcoesCategoria` stub for `river_hero` / A/B (depends on T010)
-- [ ] T012 [US1] Keep `js/mesa.js` `avancarAcerto()` cadence: `flop_hero` beat → `flop_upgrade` stub (not turn); MUST NOT import `js/motor.js` from `js/mesa.js`; MUST NOT render **Confirmar** on `flop_hero`; MUST NOT copy kickers into HUD text, `aria-*`, or storage; `persistirPrimeira` already writes `mao_atual[corretaUnica]` — leave that path, now fed by the real id (depends on T011)
+- [X] T009 [US1] Implement `avaliarMelhor5(cartas)` in `js/motor.js`: enumerate all `C(n,5)` (n∈{5,6,7}), score each five with lexicographic `chaveDesempate` `[forcaCategoria 9..0, ...kickers]` per RN-029 / `data-model.md` (wheel topo = 5); recognize royal ≠ SF, wheel legal, wrap illegal via `SEQUENCIAS_LEGAIS`; return `{ cartas, categoriaId, rotulo, chaveDesempate }`; always exactly one category (depends on T003, T004)
+- [X] T010 [US1] Add `extrairVisiveisHeroi(cartasJogo, passo)` and `extrairBoardStreet(cartasJogo, passo)` in `js/quiz.js` for `flop_hero` → indices `[4],[5],[6],[7],[8]` visíveis and `[6],[7],[8]` board; map to `{ rank, naipe }` only; MUST NOT pass holes of A/B (`[0]..[3]`), river `[10]`, burns, `idVisual`, or `chaveDesempate` (depends on T009)
+- [X] T011 [US1] Change `apresentarPergunta` in `js/quiz.js` for `PASSOS.flop_hero`: call `avaliarMelhor5` + a minimal `conjuntoOpcoesMaoAtual` (always include `categoriaId`, then fill RN-014 top-down without filtering “ainda possível” until length 6); map ids → `{ id, rotulo }` via `CATEGORIAS`; `shuffleOpcoes` (existing RNG); set `sessao.mao.corretaUnica = melhor.categoriaId`; keep `criarOpcoesCategoria` stub for `river_hero` / A/B (depends on T010)
+- [X] T012 [US1] Keep `js/mesa.js` `avancarAcerto()` cadence: `flop_hero` beat → `flop_upgrade` stub (not turn); MUST NOT import `js/motor.js` from `js/mesa.js`; MUST NOT render **Confirmar** on `flop_hero`; MUST NOT copy kickers into HUD text, `aria-*`, or storage; `persistirPrimeira` already writes `mao_atual[corretaUnica]` — leave that path, now fed by the real id (depends on T011)
 
 **Checkpoint**: User Story 1 fully functional and independently testable (flop honesto + Par CA-010 + beat → upgrade stub)
 
@@ -97,13 +97,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T013 [P] [US2] Extend `tests/contract/motor.test.js` per `contracts/motor.md` §6.7, §6.10: six cards where one 1+4 combo is `dois_pares` and the 2+3 combo is `par` → `categoriaId === 'dois_pares'`; seven cards still classify (HUD will not call this); MUST NOT require 0 hole on turn
-- [ ] T014 [P] [US2] Extend `tests/contract/quiz.test.js` and `tests/contract/hud-session.test.js` per `contracts/quiz-mao-atual.md` §5.5–5.6: after flop (real `corretaUnica` + upgrade stub) and turn pousado, enunciado de novo `Qual mão você tem agora?`; 6 opções; `corretaUnica` = Melhor5 of the 6; first attempt is a **new** `mao_atual` exposure even if id equals the flop (SC-012); acerto + `FIM_BEAT_ACERTO` → `turn_skip` / **Continuar**, not river and not a second mão-atual on that street
+- [X] T013 [P] [US2] Extend `tests/contract/motor.test.js` per `contracts/motor.md` §6.7, §6.10: six cards where one 1+4 combo is `dois_pares` and the 2+3 combo is `par` → `categoriaId === 'dois_pares'`; seven cards still classify (HUD will not call this); MUST NOT require 0 hole on turn
+- [X] T014 [P] [US2] Extend `tests/contract/quiz.test.js` and `tests/contract/hud-session.test.js` per `contracts/quiz-mao-atual.md` §5.5–5.6: after flop (real `corretaUnica` + upgrade stub) and turn pousado, enunciado de novo `Qual mão você tem agora?`; 6 opções; `corretaUnica` = Melhor5 of the 6; first attempt is a **new** `mao_atual` exposure even if id equals the flop (SC-012); acerto + `FIM_BEAT_ACERTO` → `turn_skip` / **Continuar**, not river and not a second mão-atual on that street
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Extend `extrairVisiveisHeroi` / `extrairBoardStreet` in `js/quiz.js` for `PASSOS.turn_hero`: visíveis `[4],[5],[6],[7],[8],[9]` (6) and board `[6]..[9]` (4); `apresentarPergunta(turn_hero)` MUST call the same `avaliarMelhor5` + conjunto + `shuffleOpcoes` path as flop; MUST NOT use `[10]`; MUST NOT skip the question when the category matches the flop (depends on T011, T013)
-- [ ] T016 [US2] Confirm `js/mesa.js` cadence unchanged: `turn_hero` beat → `sem_upgrade` / `turn_skip` (FR-014); MUST NOT open the river on that beat; MUST NOT add a second hero-hand question on the turn; `js/mesa.js` still MUST NOT import `js/motor.js` (depends on T015)
+- [X] T015 [US2] Extend `extrairVisiveisHeroi` / `extrairBoardStreet` in `js/quiz.js` for `PASSOS.turn_hero`: visíveis `[4],[5],[6],[7],[8],[9]` (6) and board `[6]..[9]` (4); `apresentarPergunta(turn_hero)` MUST call the same `avaliarMelhor5` + conjunto + `shuffleOpcoes` path as flop; MUST NOT use `[10]`; MUST NOT skip the question when the category matches the flop (depends on T011, T013)
+- [X] T016 [US2] Confirm `js/mesa.js` cadence unchanged: `turn_hero` beat → `sem_upgrade` / `turn_skip` (FR-014); MUST NOT open the river on that beat; MUST NOT add a second hero-hand question on the turn; `js/mesa.js` still MUST NOT import `js/motor.js` (depends on T015)
 
 **Checkpoint**: User Stories 1 AND 2 independently testable (flop 5 + turn melhor-5 + skip do turn)
 
@@ -119,13 +119,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T017 [P] [US3] Extend `tests/contract/motor.test.js` per `contracts/motor.md` §6.11–6.15: `conjuntoOpcoesMaoAtual` always length 6, includes `categoriaId`, deterministic; board 2-4-6 + certa ≠ Straight → `straight` in set; board 2-4-7 → Straight **not** tentadora-only; 3+ same suit with that suit connected → `straight_flush` tentadora (offsuit connector does not); board trips → `quadra` tentadora; board only paired → `quadra` not tentadora; Royal **not** tentadora by texture
-- [ ] T018 [P] [US3] Extend `tests/contract/quiz.test.js` per `contracts/quiz-mao-atual.md` §5.8–5.9: ten **new** `apresentarPergunta` of flop/turn → index of `corretaUnica` not constant (G008); retry after error MUST NOT permute; displayed rótulos are exactly RN-014 (0 kickers, 0 “Sequência”, 0 “par de reis”); same cards+board → same 6-id set ignoring visual order
+- [X] T017 [P] [US3] Extend `tests/contract/motor.test.js` per `contracts/motor.md` §6.11–6.15: `conjuntoOpcoesMaoAtual` always length 6, includes `categoriaId`, deterministic; board 2-4-6 + certa ≠ Straight → `straight` in set; board 2-4-7 → Straight **not** tentadora-only; 3+ same suit with that suit connected → `straight_flush` tentadora (offsuit connector does not); board trips → `quadra` tentadora; board only paired → `quadra` not tentadora; Royal **not** tentadora by texture
+- [X] T018 [P] [US3] Extend `tests/contract/quiz.test.js` per `contracts/quiz-mao-atual.md` §5.8–5.9: ten **new** `apresentarPergunta` of flop/turn → index of `corretaUnica` not constant (G008); retry after error MUST NOT permute; displayed rótulos are exactly RN-014 (0 kickers, 0 “Sequência”, 0 “par de reis”); same cards+board → same 6-id set ignoring visual order
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] Replace the US1 fill-only builder in `js/motor.js` `conjuntoOpcoesMaoAtual({ categoriaId, board })` with full FR-009: correta → immediate neighbors on RN-014 (Royal only SF; Carta alta only Par) → tentadoras from **board only** (never hero holes) in order Flush (≥2 same suit), Straight (`conectado`), Straight flush (`sfTentadora`), then Quadra/FH/Trinca/Dois pares **or** FH/Trinca/Dois pares → fill top-down without filtering possibility; if steps 2–3 exceed 5 distractors keep correta + neighbors + tentadoras in step-3 order and drop the rest; no duplicates (`data-model.md` TexturaBoard) (depends on T003, T011)
-- [ ] T020 [US3] Wire `js/quiz.js` `flop_hero` / `turn_hero` to the real `conjuntoOpcoesMaoAtual` using `extrairBoardStreet` (3 flop / 4 turn); keep `shuffleOpcoes` only at present; MUST NOT call `embaralhar` in `js/baralho.js`; MUST NOT use hero holes as board; `criarOpcoesUpgrade` / river stubs stay on `CATEGORIAS_STUB` (depends on T019)
+- [X] T019 [US3] Replace the US1 fill-only builder in `js/motor.js` `conjuntoOpcoesMaoAtual({ categoriaId, board })` with full FR-009: correta → immediate neighbors on RN-014 (Royal only SF; Carta alta only Par) → tentadoras from **board only** (never hero holes) in order Flush (≥2 same suit), Straight (`conectado`), Straight flush (`sfTentadora`), then Quadra/FH/Trinca/Dois pares **or** FH/Trinca/Dois pares → fill top-down without filtering possibility; if steps 2–3 exceed 5 distractors keep correta + neighbors + tentadoras in step-3 order and drop the rest; no duplicates (`data-model.md` TexturaBoard) (depends on T003, T011)
+- [X] T020 [US3] Wire `js/quiz.js` `flop_hero` / `turn_hero` to the real `conjuntoOpcoesMaoAtual` using `extrairBoardStreet` (3 flop / 4 turn); keep `shuffleOpcoes` only at present; MUST NOT call `embaralhar` in `js/baralho.js`; MUST NOT use hero holes as board; `criarOpcoesUpgrade` / river stubs stay on `CATEGORIAS_STUB` (depends on T019)
 
 **Checkpoint**: User Stories 1–3 independently testable (6 rótulos estáveis + tentadoras + G008)
 
@@ -141,13 +141,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T021 [P] [US4] Rewrite first-attempt cases in `tests/contract/quiz.test.js` per `contracts/quiz-mao-atual.md` §5.3 / RN-019: on a pair-flop fixture, click a displayed distractor (`verdadeira === false`) → copy exactly `Não é essa. Tente de novo.`; dead option same index; `mao_atual.par` +1 erro +0 acerto; the distractor id is **not** incremented; second click on `par` does not flip to acerto; click on dead / missing id changes nothing
-- [ ] T022 [P] [US4] Extend `tests/contract/hud-session.test.js`: wrong first choice stays `flop_hero` with option `eliminada`; correct option not marked certa until chosen; 0 skip/reveal CTA; flop then turn of the same hand produce two independent `mao_atual` first attempts (SC-012); `turn_skip` still does not write `upgrade`
+- [X] T021 [P] [US4] Rewrite first-attempt cases in `tests/contract/quiz.test.js` per `contracts/quiz-mao-atual.md` §5.3 / RN-019: on a pair-flop fixture, click a displayed distractor (`verdadeira === false`) → copy exactly `Não é essa. Tente de novo.`; dead option same index; `mao_atual.par` +1 erro +0 acerto; the distractor id is **not** incremented; second click on `par` does not flip to acerto; click on dead / missing id changes nothing
+- [X] T022 [P] [US4] Extend `tests/contract/hud-session.test.js`: wrong first choice stays `flop_hero` with option `eliminada`; correct option not marked certa until chosen; 0 skip/reveal CTA; flop then turn of the same hand produce two independent `mao_atual` first attempts (SC-012); `turn_skip` still does not write `upgrade`
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Keep `avaliarUnica` / `persistirPrimeira` / `deltasUnica` in `js/quiz.js` writing only `mao_atual[sessao.mao.corretaUnica]` on the first submission (already the 003 contract) now that `corretaUnica` is the motor id; MUST NOT increment the guessed distractor; later attempts MUST NOT `gravar`; fail-open of `js/storage.js` unchanged (no `alert`, no HUD jargon) (depends on T011, T015)
-- [ ] T024 [US4] Confirm dead-option + retry UX in `js/quiz.js` / `js/mesa.js` `gradeOpcoes()`: error copy exact; `eliminada` + marca `corte` in place; G008 frozen; no “pular pergunta” / “mostrar resposta”; `river_hero` first-attempt still counts Flush stub independently of flop/turn (FR-015) (depends on T023)
+- [X] T023 [US4] Keep `avaliarUnica` / `persistirPrimeira` / `deltasUnica` in `js/quiz.js` writing only `mao_atual[sessao.mao.corretaUnica]` on the first submission (already the 003 contract) now that `corretaUnica` is the motor id; MUST NOT increment the guessed distractor; later attempts MUST NOT `gravar`; fail-open of `js/storage.js` unchanged (no `alert`, no HUD jargon) (depends on T011, T015)
+- [X] T024 [US4] Confirm dead-option + retry UX in `js/quiz.js` / `js/mesa.js` `gradeOpcoes()`: error copy exact; `eliminada` + marca `corte` in place; G008 frozen; no “pular pergunta” / “mostrar resposta”; `river_hero` first-attempt still counts Flush stub independently of flop/turn (FR-015) (depends on T023)
 
 **Checkpoint**: User Stories 1–4 independently testable (retry + erro na categoria correta)
 
@@ -163,13 +163,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T025 [P] [US5] Extend `tests/contract/motor.test.js` per `contracts/motor.md` §6.2–6.6, §6.9: A-K-Q-J-10 suited → `royal_flush` not `straight_flush`; A-2-3-4-5 suited → `straight_flush` not royal; A-2-3-4-5 offsuit → `straight`; wraps K-A-2-3-4, Q-K-A-2-3, J-Q-K-A-2, A-2-3-4-K → not `straight` / not `straight_flush`; 5 suited non-consecutive → `flush`; each of the 10 RN-014 categories is the unique correct label in ≥1 five- or six-card fixture (SC-013)
-- [ ] T026 [P] [US5] Extend `tests/contract/quiz.test.js`: scan `sessao.hud.enunciado` and every option `rotulo` / `aria-*` on `flop_hero` / `turn_hero` for 0 kickers, 0 “par de reis” / “par de ases”, 0 “Sequência”, 0 naipe por extenso (SC-008, RN-G004); `chaveDesempate` MUST NOT appear on `sessao.hud` or in the storage blob
+- [X] T025 [P] [US5] Extend `tests/contract/motor.test.js` per `contracts/motor.md` §6.2–6.6, §6.9: A-K-Q-J-10 suited → `royal_flush` not `straight_flush`; A-2-3-4-5 suited → `straight_flush` not royal; A-2-3-4-5 offsuit → `straight`; wraps K-A-2-3-4, Q-K-A-2-3, J-Q-K-A-2, A-2-3-4-K → not `straight` / not `straight_flush`; 5 suited non-consecutive → `flush`; each of the 10 RN-014 categories is the unique correct label in ≥1 five- or six-card fixture (SC-013)
+- [X] T026 [P] [US5] Extend `tests/contract/quiz.test.js`: scan `sessao.hud.enunciado` and every option `rotulo` / `aria-*` on `flop_hero` / `turn_hero` for 0 kickers, 0 “par de reis” / “par de ases”, 0 “Sequência”, 0 naipe por extenso (SC-008, RN-G004); `chaveDesempate` MUST NOT appear on `sessao.hud` or in the storage blob
 
 ### Implementation for User Story 5
 
-- [ ] T027 [US5] Close remaining evaluator gaps in `js/motor.js` against T025 fixtures (royal as force 9, wheel SF vs wheel straight, wrap excluded by `SEQUENCIAS_LEGAIS`, flush vs SF, all 10 categories); kickers stay only in `chaveDesempate` (depends on T009)
-- [ ] T028 [US5] Audit `js/quiz.js` + `js/mesa.js` `renderHud()` / `gradeOpcoes()`: option labels come only from `CATEGORIAS.rotulo`; MUST NOT interpolate rank/kicker/suit into copy; `COPY.enunciadoHero` stays `Qual mão você tem agora?`; `abrirResultado()` MUST NOT dump kickers or `chaveDesempate` (depends on T027)
+- [X] T027 [US5] Close remaining evaluator gaps in `js/motor.js` against T025 fixtures (royal as force 9, wheel SF vs wheel straight, wrap excluded by `SEQUENCIAS_LEGAIS`, flush vs SF, all 10 categories); kickers stay only in `chaveDesempate` (depends on T009)
+- [X] T028 [US5] Audit `js/quiz.js` + `js/mesa.js` `renderHud()` / `gradeOpcoes()`: option labels come only from `CATEGORIAS.rotulo`; MUST NOT interpolate rank/kicker/suit into copy; `COPY.enunciadoHero` stays `Qual mão você tem agora?`; `abrirResultado()` MUST NOT dump kickers or `chaveDesempate` (depends on T027)
 
 **Checkpoint**: All user stories independently functional (avaliador completo + HUD só com rótulo)
 
@@ -179,12 +179,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Validação ponta a ponta, privacidade, idioma e guarda de escopo negativo (005/006 fora)
 
-- [ ] T029 Run `node --test tests/contract/` and close gaps against `specs/004-mao-atual/contracts/motor.md` §6 and `contracts/quiz-mao-atual.md` §5; 001 audio + 002 baralho + 003 storage/upgrade-stub/river-stub cases MUST still pass; MUST NOT reshuffle the 52 when permuting options
-- [ ] T030 [P] Update the local-test section of `README.md`: mention new `js/motor.js` and `tests/contract/motor.test.js`; flop/turn hero correction is no longer the Flush stub; river/upgrade remain stub until 006/005; keep the privacy sentence (only `poker-trainer:evolucao`)
-- [ ] T031 Execute manual quickstart scenarios S1–S7 from `specs/004-mao-atual/quickstart.md` against `http://localhost:8080` at 1280×720 (not `file://`): read the feltro (do not assume Flush); DevTools only the three buckets
-- [ ] T032 Audit DevTools Application plus source: only `poker-trainer:evolucao` (three buckets); zero PII/cartas/kickers/timestamp/`versao`; nicknames remain **Você** / **Adversário A** / **Adversário B**; 0 `fetch` of telemetry; `js/mesa.js` still has 0 `localStorage` and 0 `motor.js` import (SC-011, FR-019)
-- [ ] T033 Confirm negative scope in `js/motor.js`, `js/quiz.js`, and `js/mesa.js`: no upgrade enumerator (005); no `quemGanhou` / extra `river_hero` question (CA-027); no relatório/zerar/mute/desistir/preflop quiz; no poker lib; `CATEGORIAS_STUB` in `js/quiz.js` remains for river/upgrade; RN-G001 (one question) and RN-G005 (no skip/reveal on this question) hold
-- [ ] T034 Confirm copy stays the exact pt-BR strings in `js/quiz.js` `COPY` (`Você acertou` / `Não é essa. Tente de novo.` / `Não há upgrade possível.`); beat adapter in `js/mesa.js` still 400 ms / 0 ms under `prefers-reduced-motion`; keyboard path (Tab skips dead; Enter/Space submits `unica`) unchanged
+- [X] T029 Run `node --test tests/contract/` and close gaps against `specs/004-mao-atual/contracts/motor.md` §6 and `contracts/quiz-mao-atual.md` §5; 001 audio + 002 baralho + 003 storage/upgrade-stub/river-stub cases MUST still pass; MUST NOT reshuffle the 52 when permuting options
+- [X] T030 [P] Update the local-test section of `README.md`: mention new `js/motor.js` and `tests/contract/motor.test.js`; flop/turn hero correction is no longer the Flush stub; river/upgrade remain stub until 006/005; keep the privacy sentence (only `poker-trainer:evolucao`)
+- [X] T031 Execute manual quickstart scenarios S1–S7 from `specs/004-mao-atual/quickstart.md` against `http://localhost:8080` at 1280×720 (not `file://`): read the feltro (do not assume Flush); DevTools only the three buckets
+- [X] T032 Audit DevTools Application plus source: only `poker-trainer:evolucao` (three buckets); zero PII/cartas/kickers/timestamp/`versao`; nicknames remain **Você** / **Adversário A** / **Adversário B**; 0 `fetch` of telemetry; `js/mesa.js` still has 0 `localStorage` and 0 `motor.js` import (SC-011, FR-019)
+- [X] T033 Confirm negative scope in `js/motor.js`, `js/quiz.js`, and `js/mesa.js`: no upgrade enumerator (005); no `quemGanhou` / extra `river_hero` question (CA-027); no relatório/zerar/mute/desistir/preflop quiz; no poker lib; `CATEGORIAS_STUB` in `js/quiz.js` remains for river/upgrade; RN-G001 (one question) and RN-G005 (no skip/reveal on this question) hold
+- [X] T034 Confirm copy stays the exact pt-BR strings in `js/quiz.js` `COPY` (`Você acertou` / `Não é essa. Tente de novo.` / `Não há upgrade possível.`); beat adapter in `js/mesa.js` still 400 ms / 0 ms under `prefers-reduced-motion`; keyboard path (Tab skips dead; Enter/Space submits `unica`) unchanged
 
 ---
 

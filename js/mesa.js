@@ -1,7 +1,7 @@
 /**
  * Sessùo da mesa + FSM do HUD (exportùvel sem DOM).
  * Consome js/baralho.js (RN-044), js/quiz.js e js/storage.js.
- * MUST NOT chamar localStorage direto. MUST NOT criar js/motor.js.
+ * MUST NOT chamar localStorage direto. MUST NOT importar js/motor.js.
  */
 
 import { unlock as unlockAudio, play as playAudio } from './audio.js';
