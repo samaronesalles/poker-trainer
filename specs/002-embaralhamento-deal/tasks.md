@@ -46,8 +46,8 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Encaixar o módulo de domínio `baralho` no site estático já entregue pela 001, sem backend e sem bundler
 
-- [ ] T001 Create DOM-free ES module skeleton `js/baralho.js` (ADR-004/006 header; MUST NOT import `js/quiz-stub.js`, `js/audio.js`, or `document`; MUST NOT write `localStorage`)
-- [ ] T002 Confirm `package.json` stays `"type": "module"` with zero runtime dependencies and no bundler/lint/Playwright scripts; MUST NOT add `js/motor.js`, `js/quiz.js`, or `js/storage.js`
+- [X] T001 Create DOM-free ES module skeleton `js/baralho.js` (ADR-004/006 header; MUST NOT import `js/quiz-stub.js`, `js/audio.js`, or `document`; MUST NOT write `localStorage`)
+- [X] T002 Confirm `package.json` stays `"type": "module"` with zero runtime dependencies and no bundler/lint/Playwright scripts; MUST NOT add `js/motor.js`, `js/quiz.js`, or `js/storage.js`
 
 ---
 
@@ -57,12 +57,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **⚠️ CRITICAL**: Nenhuma user story pode começar até esta fase estar completa
 
-- [ ] T003 [P] Implement `criarBaralhoPadrao()` returning 52 distinct French identities (ranks `A,K,Q,J,10,9,8,7,6,5,4,3,2` × naipes `espadas,copas,ouros,paus`; 0 jokers) in `js/baralho.js` per `specs/002-embaralhamento-deal/contracts/baralho.md` §1
-- [ ] T004 [P] Implement `criarMisturaVisita()`, `misturarCursor(mistura, clientX, clientY)`, and `misturarRelogio(mistura, agoraMs, tickMs)` as a 32-byte XOR+rotate buffer (discard coordinates after mix; finite-only; no trajectory array) in `js/baralho.js` per `specs/002-embaralhamento-deal/contracts/baralho.md` §2
-- [ ] T005 Implement `embaralhar(baralho52, mistura, rng?)` as a copied Fisher–Yates shuffle (MUST NOT mutate the shared factory array): Uint32 rejection sampling, XOR with pool, injectable `rng`, production `crypto.getRandomValues` when present else pool-only (MUST NOT throw; MUST NOT treat missing crypto as montagem failure; MUST NOT use `Math.random()` as the 52-card source; MUST NOT filter ties) in `js/baralho.js` (depends on T003, T004)
-- [ ] T006 Implement `cartasDeJogo(permutacao52)` (RN-044: A `[0][1]`, B `[2][3]`, Você `[4][5]`, flop `[6][7][8]`, turn `[9]`, river `[10]`; restante 41 omitted), `validarPermutacao(cartas)` (`ok` \| `incompleto` \| `duplicata` \| `mapeamento_impossivel`), and `montarMao(mistura, rng?)` in `js/baralho.js` per `specs/002-embaralhamento-deal/contracts/baralho.md` §4–§5 (depends on T005)
-- [ ] T007 Extend in-memory session in `js/mesa.js`: `misturaVisita`, `montagemEmCurso` (not a HUD state), `hud.linhaErro`; add `EVENTOS.FALHA_MONTAGEM`; keep exactly five HUD states (`ociosa|deal|perguntando|sem_upgrade|resultado`); export exact copy constant `Não foi possível embaralhar. Tente de novo.` from `js/mesa.js` (not `js/quiz-stub.js`)
-- [ ] T008 On `bootMesa()` in `js/mesa.js`, call `criarMisturaVisita()` once per page load and register `pointermove` to `misturarCursor` (window/clube); reload MUST discard the previous buffer (depends on T004, T007)
+- [X] T003 [P] Implement `criarBaralhoPadrao()` returning 52 distinct French identities (ranks `A,K,Q,J,10,9,8,7,6,5,4,3,2` × naipes `espadas,copas,ouros,paus`; 0 jokers) in `js/baralho.js` per `specs/002-embaralhamento-deal/contracts/baralho.md` §1
+- [X] T004 [P] Implement `criarMisturaVisita()`, `misturarCursor(mistura, clientX, clientY)`, and `misturarRelogio(mistura, agoraMs, tickMs)` as a 32-byte XOR+rotate buffer (discard coordinates after mix; finite-only; no trajectory array) in `js/baralho.js` per `specs/002-embaralhamento-deal/contracts/baralho.md` §2
+- [X] T005 Implement `embaralhar(baralho52, mistura, rng?)` as a copied Fisher–Yates shuffle (MUST NOT mutate the shared factory array): Uint32 rejection sampling, XOR with pool, injectable `rng`, production `crypto.getRandomValues` when present else pool-only (MUST NOT throw; MUST NOT treat missing crypto as montagem failure; MUST NOT use `Math.random()` as the 52-card source; MUST NOT filter ties) in `js/baralho.js` (depends on T003, T004)
+- [X] T006 Implement `cartasDeJogo(permutacao52)` (RN-044: A `[0][1]`, B `[2][3]`, Você `[4][5]`, flop `[6][7][8]`, turn `[9]`, river `[10]`; restante 41 omitted), `validarPermutacao(cartas)` (`ok` \| `incompleto` \| `duplicata` \| `mapeamento_impossivel`), and `montarMao(mistura, rng?)` in `js/baralho.js` per `specs/002-embaralhamento-deal/contracts/baralho.md` §4–§5 (depends on T005)
+- [X] T007 Extend in-memory session in `js/mesa.js`: `misturaVisita`, `montagemEmCurso` (not a HUD state), `hud.linhaErro`; add `EVENTOS.FALHA_MONTAGEM`; keep exactly five HUD states (`ociosa|deal|perguntando|sem_upgrade|resultado`); export exact copy constant `Não foi possível embaralhar. Tente de novo.` from `js/mesa.js` (not `js/quiz-stub.js`)
+- [X] T008 On `bootMesa()` in `js/mesa.js`, call `criarMisturaVisita()` once per page load and register `pointermove` to `misturarCursor` (window/clube); reload MUST discard the previous buffer (depends on T004, T007)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -78,15 +78,15 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US1] Write contract tests in `tests/contract/baralho.test.js` for `criarBaralhoPadrao` (52 unique), `embaralhar` (52 unique; not always factory order across 10 calls), `cartasDeJogo` RN-044 table, indices 11–51 absent from the 11, module references neither `localStorage` nor `document`, and no G003 “discard tying board” branch (`specs/002-embaralhamento-deal/contracts/baralho.md` §7.1–7.4, 7.7–7.8; CA-006)
-- [ ] T010 [P] [US1] Update helper `ate()` and extend FSM tests in `tests/contract/hud-session.test.js`: `INICIAR_MAO` without valid 11-card payload stays `ociosa` with `mao === null`; `INICIAR_MAO` with RN-044 `cartasJogo` enters `deal` and increments `indiceMaoSessao`; existing 001 cases keep passing with an explicit montagem payload (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.1–6.2)
+- [X] T009 [P] [US1] Write contract tests in `tests/contract/baralho.test.js` for `criarBaralhoPadrao` (52 unique), `embaralhar` (52 unique; not always factory order across 10 calls), `cartasDeJogo` RN-044 table, indices 11–51 absent from the 11, module references neither `localStorage` nor `document`, and no G003 “discard tying board” branch (`specs/002-embaralhamento-deal/contracts/baralho.md` §7.1–7.4, 7.7–7.8; CA-006)
+- [X] T010 [P] [US1] Update helper `ate()` and extend FSM tests in `tests/contract/hud-session.test.js`: `INICIAR_MAO` without valid 11-card payload stays `ociosa` with `mao === null`; `INICIAR_MAO` with RN-044 `cartasJogo` enters `deal` and increments `indiceMaoSessao`; existing 001 cases keep passing with an explicit montagem payload (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.1–6.2)
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] Remove `CARTAS_JOGO_STUB` as the source of the 11 game faces in `js/carta.js` (delete the export or leave it with zero consumers; MUST NOT keep it as visual fallback) (FR-016)
-- [ ] T012 [US1] Change `novaMao` / `INICIAR_MAO` in `js/mesa.js` to require montagem `ok` payload (`permutacao` frozen on `mao`, `cartasJogo` from `cartasDeJogo`); map hole indices A=`[0][1]`, B=`[2][3]`, Você=`[4][5]` in `sentarHoles()` and `sentarHolesNoDom()`; MUST NOT enter `deal` without valid cards; `misturarRelogio` runs inside `montarMao` (depends on T006, T007, T011)
-- [ ] T013 [US1] Orchestrate **Nova mão** in `iniciarMao()` (`js/mesa.js`): stay `ociosa` while `montagemEmCurso`; call `montarMao(mistura)` synchronously before any HUD `deal`; on `ok` apply `INICIAR_MAO` and start hole deal in < 1 s; permutation ready before first card motion; play existing `shuffle` SFX of the casco (not a second sorteio) (FR-022, FR-023, SC-012)
-- [ ] T014 [US1] Orchestrate **Próxima mão** in `iniciarMao({ proxima: true })` (`js/mesa.js`): collect until zero `.carta` on seats and empty community slots **then** `montarMao` and deal; MUST NOT apply `INICIAR_MAO`/`PROXIMA_MAO` while previous faces are still visible; MUST NOT reuse the previous permutation (FR-015)
+- [X] T011 [P] [US1] Remove `CARTAS_JOGO_STUB` as the source of the 11 game faces in `js/carta.js` (delete the export or leave it with zero consumers; MUST NOT keep it as visual fallback) (FR-016)
+- [X] T012 [US1] Change `novaMao` / `INICIAR_MAO` in `js/mesa.js` to require montagem `ok` payload (`permutacao` frozen on `mao`, `cartasJogo` from `cartasDeJogo`); map hole indices A=`[0][1]`, B=`[2][3]`, Você=`[4][5]` in `sentarHoles()` and `sentarHolesNoDom()`; MUST NOT enter `deal` without valid cards; `misturarRelogio` runs inside `montarMao` (depends on T006, T007, T011)
+- [X] T013 [US1] Orchestrate **Nova mão** in `iniciarMao()` (`js/mesa.js`): stay `ociosa` while `montagemEmCurso`; call `montarMao(mistura)` synchronously before any HUD `deal`; on `ok` apply `INICIAR_MAO` and start hole deal in < 1 s; permutation ready before first card motion; play existing `shuffle` SFX of the casco (not a second sorteio) (FR-022, FR-023, SC-012)
+- [X] T014 [US1] Orchestrate **Próxima mão** in `iniciarMao({ proxima: true })` (`js/mesa.js`): collect until zero `.carta` on seats and empty community slots **then** `montarMao` and deal; MUST NOT apply `INICIAR_MAO`/`PROXIMA_MAO` while previous faces are still visible; MUST NOT reuse the previous permutation (FR-015)
 
 **Checkpoint**: User Story 1 fully functional and independently testable (shuffle por mão + RN-044 + deal sem ritual de mouse)
 
@@ -100,13 +100,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 2
 
-- [ ] T015 [US2] Extend FSM contract tests in `tests/contract/hud-session.test.js`: after `FIM_ANIMACAO_STREET` `holes`, `assentos.adversarioA.hole` = game cards 0–1, `adversarioB` = 2–3, `voce` = 4–5; hero `face`; A `verso`; all five board slots `carta === null`; HUD not `perguntando` (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.2–6.3)
+- [X] T015 [US2] Extend FSM contract tests in `tests/contract/hud-session.test.js`: after `FIM_ANIMACAO_STREET` `holes`, `assentos.adversarioA.hole` = game cards 0–1, `adversarioB` = 2–3, `voce` = 4–5; hero `face`; A `verso`; all five board slots `carta === null`; HUD not `perguntando` (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.2–6.3)
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Change `ritualHoles()` deal order in `js/mesa.js` to seat-at-a-time **Adversário A → Adversário B → Você** (two cards each before the next); MUST NOT round-robin A-B-Você-A-B-Você; MUST NOT start with the hero (replace the current You-first `destinos` loop) (FR-008)
-- [ ] T017 [US2] On hole land in `js/mesa.js` / `js/carta.js`: Você `data-face="up"`; A and B `data-face="down"`; with `prefers-reduced-motion: reduce` seat instantly in place (existing teto 0 s); MUST NOT add felt-shuffle theater (FR-022, deal-visivel.md §1–§2)
-- [ ] T018 [US2] After holes land and before the casco flop street starts, keep `data-slot` 1–5 empty (no `.carta` face or back in the slot) and HUD with 0 options in `js/mesa.js` (CA-008, FR-009)
+- [X] T016 [US2] Change `ritualHoles()` deal order in `js/mesa.js` to seat-at-a-time **Adversário A → Adversário B → Você** (two cards each before the next); MUST NOT round-robin A-B-Você-A-B-Você; MUST NOT start with the hero (replace the current You-first `destinos` loop) (FR-008)
+- [X] T017 [US2] On hole land in `js/mesa.js` / `js/carta.js`: Você `data-face="up"`; A and B `data-face="down"`; with `prefers-reduced-motion: reduce` seat instantly in place (existing teto 0 s); MUST NOT add felt-shuffle theater (FR-022, deal-visivel.md §1–§2)
+- [X] T018 [US2] After holes land and before the casco flop street starts, keep `data-slot` 1–5 empty (no `.carta` face or back in the slot) and HUD with 0 options in `js/mesa.js` (CA-008, FR-009)
 
 **Checkpoint**: User Stories 1 AND 2 independently testable (deal honesto A→B→Você)
 
@@ -120,13 +120,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 3
 
-- [ ] T019 [US3] Extend FSM contract tests in `tests/contract/hud-session.test.js`: `CONTINUAR` / street advances MUST NOT replace `mao.cartasJogo` or `mao.permutacao`; after turn, flop slot identities equal pre-turn `[6][7][8]`; after river, flop+turn unchanged (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.4)
+- [X] T019 [US3] Extend FSM contract tests in `tests/contract/hud-session.test.js`: `CONTINUAR` / street advances MUST NOT replace `mao.cartasJogo` or `mao.permutacao`; after turn, flop slot identities equal pre-turn `[6][7][8]`; after river, flop+turn unchanged (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.4)
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Open flop in `ritualFlop()` / `preencherSlots()` (`js/mesa.js`) as frozen `[6][7][8]` face-up in slots 1–3 only when the flop street starts; slots 4–5 stay empty; MUST NOT call `embaralhar` or `montarMao` (FR-010, RN-011)
-- [ ] T021 [US3] Open turn as frozen `[9]` in slot 4 without altering flop, and river as frozen `[10]` in slot 5 without altering flop/turn, in `ritualTurnOuRiver()` (`js/mesa.js`) (FR-011, FR-012, CA-009)
-- [ ] T022 [US3] Keep unused community slots visibly empty until their street (MUST NOT pre-place backs) in `js/mesa.js` and `index.html` (FR-009)
+- [X] T020 [US3] Open flop in `ritualFlop()` / `preencherSlots()` (`js/mesa.js`) as frozen `[6][7][8]` face-up in slots 1–3 only when the flop street starts; slots 4–5 stay empty; MUST NOT call `embaralhar` or `montarMao` (FR-010, RN-011)
+- [X] T021 [US3] Open turn as frozen `[9]` in slot 4 without altering flop, and river as frozen `[10]` in slot 5 without altering flop/turn, in `ritualTurnOuRiver()` (`js/mesa.js`) (FR-011, FR-012, CA-009)
+- [X] T022 [US3] Keep unused community slots visibly empty until their street (MUST NOT pre-place backs) in `js/mesa.js` and `index.html` (FR-009)
 
 **Checkpoint**: User Stories 1–3 independently testable (board estável, uma permutação por mão)
 
@@ -140,12 +140,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 4
 
-- [ ] T023 [P] [US4] Extend `tests/contract/baralho.test.js`: `cartasDeJogo` returns 11 distinct standard-deck identities; duplicate permutation → `validarPermutacao` ≠ `ok`; restante never included (`specs/002-embaralhamento-deal/contracts/baralho.md` §7.4, 7.6)
+- [X] T023 [P] [US4] Extend `tests/contract/baralho.test.js`: `cartasDeJogo` returns 11 distinct standard-deck identities; duplicate permutation → `validarPermutacao` ≠ `ok`; restante never included (`specs/002-embaralhamento-deal/contracts/baralho.md` §7.4, 7.6)
 
 ### Implementation for User Story 4
 
-- [ ] T024 [US4] Keep scenic burn on turn/river via `criarBurnCenico()` in `js/carta.js` and `mostrarBurn()` in `js/mesa.js`: verso only, no `data-rank`/`data-suit` of play, outside `data-slot` 1–5, MUST NOT consume `permutacao[11]` or create a 12th game card (RN-045, RN-G007, CA-007)
-- [ ] T025 [US4] Render only the 11 `cartasJogo` as hole/community faces in `js/mesa.js`; restante `[11]…[51]` MUST NOT be painted on seats or board (SC-010)
+- [X] T024 [US4] Keep scenic burn on turn/river via `criarBurnCenico()` in `js/carta.js` and `mostrarBurn()` in `js/mesa.js`: verso only, no `data-rank`/`data-suit` of play, outside `data-slot` 1–5, MUST NOT consume `permutacao[11]` or create a 12th game card (RN-045, RN-G007, CA-007)
+- [X] T025 [US4] Render only the 11 `cartasJogo` as hole/community faces in `js/mesa.js`; restante `[11]…[51]` MUST NOT be painted on seats or board (SC-010)
 
 **Checkpoint**: User Stories 1–4 independently testable (11 honestas + burn cênico)
 
@@ -159,12 +159,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 5
 
-- [ ] T026 [US5] Extend FSM contract tests in `tests/contract/hud-session.test.js`: after `FIM_ANIMACAO_STREET` `showdown`, A/B hole identities equal deal-time indices 0–3; `viradaShowdownConcluida` does not swap `rank`/`naipe` (hud-montagem / deal-visivel.md §6)
+- [X] T026 [US5] Extend FSM contract tests in `tests/contract/hud-session.test.js`: after `FIM_ANIMACAO_STREET` `showdown`, A/B hole identities equal deal-time indices 0–3; `viradaShowdownConcluida` does not swap `rank`/`naipe` (hud-montagem / deal-visivel.md §6)
 
 ### Implementation for User Story 5
 
-- [ ] T027 [US5] Keep A/B `verso` through flop and turn while Você stays `face` in `js/mesa.js` (FR-006, FR-008)
-- [ ] T028 [US5] Flip A/B in place at showdown in `virarAdversariosNoDom()` / `fimAnimacao(..., 'showdown')` (`js/mesa.js`): `data-face` down→up on the same elements/identities as the deal; MUST NOT deal a new pair (RN-012)
+- [X] T027 [US5] Keep A/B `verso` through flop and turn while Você stays `face` in `js/mesa.js` (FR-006, FR-008)
+- [X] T028 [US5] Flip A/B in place at showdown in `virarAdversariosNoDom()` / `fimAnimacao(..., 'showdown')` (`js/mesa.js`): `data-face` down→up on the same elements/identities as the deal; MUST NOT deal a new pair (RN-012)
 
 **Checkpoint**: User Stories 1–5 independently testable (showdown = deal)
 
@@ -178,16 +178,16 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 6
 
-- [ ] T029 [P] [US6] Extend `tests/contract/baralho.test.js`: `embaralhar` / `montarMao` without `getRandomValues` still return 52 cards (not a montagem failure); injected invalid deck → `status` ≠ `ok` and `permutacao`/`cartasJogo` null (`specs/002-embaralhamento-deal/contracts/baralho.md` §7.5–7.6)
-- [ ] T030 [P] [US6] Extend `tests/contract/hud-session.test.js`: `FALHA_MONTAGEM` stays `ociosa`, `mao === null`, exact error line, CTA **Nova mão**; second start while `montagemEmCurso` does not increment `indiceMaoSessao` twice (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.5–6.6)
+- [X] T029 [P] [US6] Extend `tests/contract/baralho.test.js`: `embaralhar` / `montarMao` without `getRandomValues` still return 52 cards (not a montagem failure); injected invalid deck → `status` ≠ `ok` and `permutacao`/`cartasJogo` null (`specs/002-embaralhamento-deal/contracts/baralho.md` §7.5–7.6)
+- [X] T030 [P] [US6] Extend `tests/contract/hud-session.test.js`: `FALHA_MONTAGEM` stays `ociosa`, `mao === null`, exact error line, CTA **Nova mão**; second start while `montagemEmCurso` does not increment `indiceMaoSessao` twice (`specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6.5–6.6)
 
 ### Implementation for User Story 6
 
-- [ ] T031 [US6] Implement `FALHA_MONTAGEM` in `js/mesa.js` + `renderHud()`: remain `ociosa`, `mao = null`, `hud.linhaErro` exactly `Não foi possível embaralhar. Tente de novo.` replacing the purpose line until next successful montagem or reload; CTA **Nova mão**; 0 `alert()`; MUST NOT enter `deal`; surface in < 3 s (FR-017, SC-009)
-- [ ] T032 [US6] Keep `FALHA_DEAL` only for exceptions **after** HUD already entered `deal` (animation) in `js/mesa.js`; montagem failure MUST NOT reuse that path (`ociosa → deal → ociosa` forbidden)
-- [ ] T033 [US6] Ignore a second **Nova mão** while `montagemEmCurso` in `js/mesa.js` (one attempt; `indiceMaoSessao` increments only on `ok`) (FR-023)
-- [ ] T034 [US6] Fail-open wiring in `js/mesa.js` and `js/baralho.js`: no pointer movement still shuffles; missing `crypto.getRandomValues` uses pool and still deals; MUST NOT show a “mexa o mouse” ritual or block the HUD (FR-004, SC-008)
-- [ ] T035 [US6] Privacy/retention in `js/mesa.js` and `js/baralho.js`: MUST NOT prompt for name/e-mail/CPF; MUST NOT persist permutation, pool, or coordinates; reload boots a new mistura and purpose line (not the error line unless the new load fails) (FR-019, SC-011)
+- [X] T031 [US6] Implement `FALHA_MONTAGEM` in `js/mesa.js` + `renderHud()`: remain `ociosa`, `mao = null`, `hud.linhaErro` exactly `Não foi possível embaralhar. Tente de novo.` replacing the purpose line until next successful montagem or reload; CTA **Nova mão**; 0 `alert()`; MUST NOT enter `deal`; surface in < 3 s (FR-017, SC-009)
+- [X] T032 [US6] Keep `FALHA_DEAL` only for exceptions **after** HUD already entered `deal` (animation) in `js/mesa.js`; montagem failure MUST NOT reuse that path (`ociosa → deal → ociosa` forbidden)
+- [X] T033 [US6] Ignore a second **Nova mão** while `montagemEmCurso` in `js/mesa.js` (one attempt; `indiceMaoSessao` increments only on `ok`) (FR-023)
+- [X] T034 [US6] Fail-open wiring in `js/mesa.js` and `js/baralho.js`: no pointer movement still shuffles; missing `crypto.getRandomValues` uses pool and still deals; MUST NOT show a “mexa o mouse” ritual or block the HUD (FR-004, SC-008)
+- [X] T035 [US6] Privacy/retention in `js/mesa.js` and `js/baralho.js`: MUST NOT prompt for name/e-mail/CPF; MUST NOT persist permutation, pool, or coordinates; reload boots a new mistura and purpose line (not the error line unless the new load fails) (FR-019, SC-011)
 
 **Checkpoint**: All user stories independently functional (gerador honesto + fail-open + HUD ociosa na falha)
 
@@ -197,12 +197,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Validação ponta a ponta, privacidade, idioma e guarda de escopo negativo
 
-- [ ] T036 Run `node --test tests/contract/` and close gaps against `specs/002-embaralhamento-deal/contracts/baralho.md` §7 and `specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6 (001 audio/HUD cases MUST still pass)
-- [ ] T037 [P] Mention `js/baralho.js` and the two contract files (`baralho.test.js`, `hud-session.test.js`) in the local-test section of `README.md` without claiming `localStorage` evolution (still feature 003)
-- [ ] T038 Execute manual quickstart scenarios S1–S12 from `specs/002-embaralhamento-deal/quickstart.md` against `http://localhost:8080` at 1280×720 (not `file://`)
-- [ ] T039 Audit DevTools Application plus source: zero baralho/cursor/PII keys in `localStorage`/cookies; zero coordinate logs; nicknames remain **Você** / **Adversário A** / **Adversário B**; no name fields in `index.html`, `js/mesa.js`, `js/baralho.js` (SC-011, Principle II)
-- [ ] T040 Confirm negative scope: `js/quiz-stub.js` untouched (G008 still `Math.random` and MUST NOT reshuffle the 52 — FR-021); no `js/motor.js`/`js/quiz.js`/`js/storage.js`; no shuffle theater; no CTA **Embaralhar**; no sixth HUD state; no betting/mute/zerar/preflop quiz
-- [ ] T041 Confirm RN-G003 (no tie filter in `js/baralho.js`) and RN-G007 (burn still scenic in `js/mesa.js` / `js/carta.js`); copy of error is pt-BR exact; operational cost remains zero (no entropy API)
+- [X] T036 Run `node --test tests/contract/` and close gaps against `specs/002-embaralhamento-deal/contracts/baralho.md` §7 and `specs/002-embaralhamento-deal/contracts/hud-montagem.md` §6 (001 audio/HUD cases MUST still pass)
+- [X] T037 [P] Mention `js/baralho.js` and the two contract files (`baralho.test.js`, `hud-session.test.js`) in the local-test section of `README.md` without claiming `localStorage` evolution (still feature 003)
+- [X] T038 Execute manual quickstart scenarios S1–S12 from `specs/002-embaralhamento-deal/quickstart.md` against `http://localhost:8080` at 1280×720 (not `file://`)
+- [X] T039 Audit DevTools Application plus source: zero baralho/cursor/PII keys in `localStorage`/cookies; zero coordinate logs; nicknames remain **Você** / **Adversário A** / **Adversário B**; no name fields in `index.html`, `js/mesa.js`, `js/baralho.js` (SC-011, Principle II)
+- [X] T040 Confirm negative scope: `js/quiz-stub.js` untouched (G008 still `Math.random` and MUST NOT reshuffle the 52 — FR-021); no `js/motor.js`/`js/quiz.js`/`js/storage.js`; no shuffle theater; no CTA **Embaralhar**; no sixth HUD state; no betting/mute/zerar/preflop quiz
+- [X] T041 Confirm RN-G003 (no tie filter in `js/baralho.js`) and RN-G007 (burn still scenic in `js/mesa.js` / `js/carta.js`); copy of error is pt-BR exact; operational cost remains zero (no entropy API)
 
 ---
 

@@ -53,10 +53,10 @@ npx serve .
 
 Depois acesse `http://localhost:8080`. Viewport de referência desktop: **1280×720** pixels CSS (DevTools). Abaixo disso o HUD pode empilhar; as cartas permanecem legíveis.
 
-Testes de contrato da FSM (Node 18+, sem bundler):
+Testes de contrato (Node 18+, sem bundler): FSM do HUD em `tests/contract/hud-session.test.js`, áudio fail-open e o gerador em `tests/contract/baralho.test.js` (`js/baralho.js` — 52 cartas, RN-044, fail-open de Web Crypto). Sem Playwright.
 
 ```bash
-node --test tests/contract/*.test.js
+node --test tests/contract/
 ```
 
 ## Deploy

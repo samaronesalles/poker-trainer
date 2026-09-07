@@ -7,7 +7,7 @@ alwaysApply: true
 # LGPD — Sessão local sem dado pessoal
 
 ## Contexto
-A feature 001 (mesa imersiva) opera um treino single-player no navegador. Apelidos e avatares são de produto. Recarregar aborta a mão. Evolução em `localStorage` é de feature posterior.
+A mesa (features 001–002) opera um treino single-player no navegador. Apelidos e avatares são de produto. Recarregar aborta a mão e apaga o pool de mistura. Evolução em `localStorage` é de feature posterior. Coordenadas de ponteiro só misturam um buffer compacto em memória e são descartadas — sem trajetória, sem log.
 
 ## Artigo(s) LGPD aplicável(is)
 - Art. 6º, III (necessidade): não coletar o que o treino não precisa.

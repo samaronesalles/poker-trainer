@@ -1,18 +1,7 @@
-/** Componente DOM de carta (ADR-005). Sem Unicode/emoji de baralho como face. */
-
-export const CARTAS_JOGO_STUB = Object.freeze([
-  Object.freeze({ rank: 'A', suit: 'espadas' }),
-  Object.freeze({ rank: 'K', suit: 'copas' }),
-  Object.freeze({ rank: 'Q', suit: 'ouros' }),
-  Object.freeze({ rank: 'J', suit: 'paus' }),
-  Object.freeze({ rank: '10', suit: 'copas' }),
-  Object.freeze({ rank: '9', suit: 'espadas' }),
-  Object.freeze({ rank: '8', suit: 'ouros' }),
-  Object.freeze({ rank: '7', suit: 'paus' }),
-  Object.freeze({ rank: '6', suit: 'copas' }),
-  Object.freeze({ rank: '5', suit: 'espadas' }),
-  Object.freeze({ rank: '4', suit: 'ouros' }),
-]);
+/**
+ * Componente DOM de carta (ADR-005). Sem Unicode/emoji de baralho como face.
+ * Faces de jogo vêm de js/baralho.js (RN-044). MUST NOT servir stub como fonte.
+ */
 
 const SUIT_META = {
   copas: { label: 'copas', color: 'vermelho' },

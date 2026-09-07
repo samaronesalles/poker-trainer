@@ -1,15 +1,17 @@
 /**
- * Sesso da mesa + FSM do HUD (exportvel sem DOM).
- * MUST NOT escrever localStorage. MUST NOT criar baralho/motor/quiz/storage.
+ * SessÃ£o da mesa + FSM do HUD (exportÃ¡vel sem DOM).
+ * Consome js/baralho.js (RN-044). MUST NOT escrever localStorage.
+ * MUST NOT criar motor/quiz/storage. MUST NOT reescrever quiz-stub.
  */
 
 import { unlock as unlockAudio, play as playAudio } from './audio.js';
 import {
-  aplicarVisibilidade,
-  CARTAS_JOGO_STUB,
-  criarBurnCenico,
-  criarElementoCarta,
-} from './carta.js';
+  criarMisturaVisita,
+  misturarCursor,
+  montarMao,
+  validarPermutacao,
+} from './baralho.js';
+import { aplicarVisibilidade, criarBurnCenico, criarElementoCarta } from './carta.js';
 import {
   APELIDOS,
   CATEGORIA_CORRETA_ROTULO,
@@ -21,6 +23,8 @@ import {
   rotuloVencedorCorreto,
 } from './quiz-stub.js';
 
+export const LINHA_ERRO_MONTAGEM = 'NÃ£o foi possÃ­vel embaralhar. Tente de novo.';
+
 export const EVENTOS = Object.freeze({
   INICIAR_MAO: 'INICIAR_MAO',
   PROXIMA_MAO: 'PROXIMA_MAO',
@@ -28,6 +32,7 @@ export const EVENTOS = Object.freeze({
   ESCOLHER_OPCAO: 'ESCOLHER_OPCAO',
   FIM_ANIMACAO_STREET: 'FIM_ANIMACAO_STREET',
   FALHA_DEAL: 'FALHA_DEAL',
+  FALHA_MONTAGEM: 'FALHA_MONTAGEM',
 });
 
 export function tetoStreetMs(indiceMaoSessao, movimentoReduzido) {
@@ -40,6 +45,7 @@ function hudOciosa() {
     estado: 'ociosa',
     enunciado: null,
     linhaProposito: COPY.linhaProposito,
+    linhaErro: null,
     opcoes: [],
     cta: { nome: COPY.ctaNovaMao },
     feedback: null,
@@ -47,15 +53,37 @@ function hudOciosa() {
   };
 }
 
-function cartasJogo() {
-  return CARTAS_JOGO_STUB.map((carta, indice) => ({
-    idVisual: `jogo-${indice}`,
+function clonarCartasJogo(cartasJogo) {
+  return cartasJogo.map((carta, indice) => ({
+    idVisual: carta.idVisual ?? `jogo-${indice}`,
     rank: carta.rank,
-    naipe: carta.suit,
-    visibilidade: 'verso',
-    papel: indice < 6 ? 'hole' : 'comunitaria',
+    naipe: carta.naipe,
+    indicePermutacao: carta.indicePermutacao ?? indice,
+    visibilidade: carta.visibilidade ?? 'verso',
+    papel: carta.papel ?? (indice < 6 ? 'hole' : 'comunitaria'),
     animando: true,
   }));
+}
+
+function congelarPermutacao(permutacao) {
+  return Object.freeze(
+    permutacao.map((carta) => Object.freeze({ rank: carta.rank, naipe: carta.naipe })),
+  );
+}
+
+function payloadMontagemOk(payload) {
+  if (!payload || !Array.isArray(payload.cartasJogo) || payload.cartasJogo.length !== 11) {
+    return false;
+  }
+  if (!Array.isArray(payload.permutacao) || validarPermutacao(payload.permutacao) !== 'ok') {
+    return false;
+  }
+  const chaves = new Set();
+  for (const carta of payload.cartasJogo) {
+    if (!carta?.rank || !carta?.naipe) return false;
+    chaves.add(`${carta.rank}-${carta.naipe}`);
+  }
+  return chaves.size === 11;
 }
 
 function assentosVazios() {
@@ -82,6 +110,8 @@ export function criarSessao() {
     mao: null,
     indiceMaoSessao: 0,
     movimentoReduzido: false,
+    misturaVisita: criarMisturaVisita(),
+    montagemEmCurso: false,
   };
 }
 
@@ -89,12 +119,13 @@ function entrarDeal(sessao) {
   sessao.hud.estado = 'deal';
   sessao.hud.enunciado = null;
   sessao.hud.linhaProposito = null;
+  sessao.hud.linhaErro = null;
   sessao.hud.opcoes = [];
   sessao.hud.cta = null;
   sessao.hud.feedback = null;
 }
 
-function novaMao(sessao) {
+function novaMao(sessao, payload) {
   sessao.indiceMaoSessao += 1;
   sessao.pote = { modo: 'centro', vencedoresVisuais: [] };
   sessao.board = boardVazio();
@@ -105,7 +136,8 @@ function novaMao(sessao) {
     adversarioB: null,
   };
   sessao.mao = {
-    cartasJogo: cartasJogo(),
+    permutacao: congelarPermutacao(payload.permutacao),
+    cartasJogo: clonarCartasJogo(payload.cartasJogo),
     street: 'preflop',
     passo: null,
     cartasDaStreetPousadas: false,
@@ -126,12 +158,27 @@ function voltarOciosa(sessao, { reverterIndice = false } = {}) {
   sessao.hud = hudOciosa();
 }
 
+function falhaMontagem(sessao) {
+  sessao.mao = null;
+  sessao.assentos = assentosVazios();
+  sessao.board = boardVazio();
+  sessao.pote = { modo: 'centro', vencedoresVisuais: [] };
+  sessao.hud = hudOciosa();
+  sessao.hud.linhaErro = LINHA_ERRO_MONTAGEM;
+}
+
+function tentarIniciar(sessao, payload) {
+  if (sessao.montagemEmCurso && !payload?.aceitarMontagem) return;
+  if (!payloadMontagemOk(payload)) return;
+  novaMao(sessao, payload);
+}
+
 function sentarHoles(sessao) {
   const cartas = sessao.mao.cartasJogo;
   const mapa = {
-    voce: [cartas[0], cartas[1]],
-    adversarioA: [cartas[2], cartas[3]],
-    adversarioB: [cartas[4], cartas[5]],
+    adversarioA: [cartas[0], cartas[1]],
+    adversarioB: [cartas[2], cartas[3]],
+    voce: [cartas[4], cartas[5]],
   };
   for (const assento of sessao.assentos) {
     const par = mapa[assento.id];
@@ -303,11 +350,11 @@ export function aplicar(sessao, evento, payload = {}) {
   switch (evento) {
     case EVENTOS.INICIAR_MAO:
       if (sessao.hud.estado !== 'ociosa') return sessao;
-      novaMao(sessao);
+      tentarIniciar(sessao, payload);
       return sessao;
     case EVENTOS.PROXIMA_MAO:
       if (sessao.hud.estado !== 'resultado') return sessao;
-      novaMao(sessao);
+      tentarIniciar(sessao, payload);
       return sessao;
     case EVENTOS.CONTINUAR:
       continuar(sessao);
@@ -322,6 +369,9 @@ export function aplicar(sessao, evento, payload = {}) {
       if (sessao.hud.estado === 'deal') {
         voltarOciosa(sessao, { reverterIndice: true });
       }
+      return sessao;
+    case EVENTOS.FALHA_MONTAGEM:
+      falhaMontagem(sessao);
       return sessao;
     default:
       return sessao;
@@ -400,9 +450,9 @@ function pintarCarta(host, spec, visibilidade) {
 
 function sentarHolesNoDom() {
   const ordem = [
-    ['voce', 0, 1, 'face'],
-    ['adversarioA', 2, 3, 'verso'],
-    ['adversarioB', 4, 5, 'verso'],
+    ['adversarioA', 0, 1, 'verso'],
+    ['adversarioB', 2, 3, 'verso'],
+    ['voce', 4, 5, 'face'],
   ];
   for (const [seat, a, b, vis] of ordem) {
     const ca = sessao.mao.cartasJogo[a];
@@ -508,7 +558,7 @@ function renderHud() {
   }
 
   if (sessao.hud.estado === 'ociosa') {
-    linha.textContent = COPY.linhaProposito;
+    linha.textContent = sessao.hud.linhaErro ?? COPY.linhaProposito;
     hud.append(linha, acoesCta(COPY.ctaNovaMao));
     return;
   }
@@ -543,7 +593,7 @@ function renderHud() {
         : `${rotuloVencedorCorreto(sessao.indiceMaoSessao)} levou o pote.`;
     const cats = document.createElement('p');
     const c = sessao.hud.categoriasIdentificadas;
-    cats.textContent = `${APELIDOS.voce}: ${c.voce}  ${APELIDOS.adversarioA}: ${c.adversarioA}  ${APELIDOS.adversarioB}: ${c.adversarioB}`;
+    cats.textContent = `${APELIDOS.voce}: ${c.voce} Â· ${APELIDOS.adversarioA}: ${c.adversarioA} Â· ${APELIDOS.adversarioB}: ${c.adversarioB}`;
     bloco.append(venceu, cats);
     hud.append(bloco, acoesCta(COPY.ctaProximaMao));
     focarPrimeiroHabilitado(hud);
@@ -600,23 +650,22 @@ async function ritualHoles() {
   const teto = tetoStreetMs(sessao.indiceMaoSessao, sessao.movimentoReduzido);
   playAudio('shuffle');
   const destinos = [
-    ['voce', 0, 0],
-    ['voce', 1, 1],
-    ['adversarioA', 0, 2],
-    ['adversarioA', 1, 3],
-    ['adversarioB', 0, 4],
-    ['adversarioB', 1, 5],
+    ['adversarioA', 0, 0],
+    ['adversarioA', 1, 1],
+    ['adversarioB', 0, 2],
+    ['adversarioB', 1, 3],
+    ['voce', 0, 4],
+    ['voce', 1, 5],
   ];
   await comTeto(async (ms) => {
     const cada = destinos.length ? Math.max(90, Math.floor((ms || 0) / destinos.length)) : 0;
     for (const [seat, hole, idx] of destinos) {
       const spec = sessao.mao.cartasJogo[idx];
-      const vis = seat === 'voce' ? 'verso' : 'verso';
       const el = criarElementoCarta({
         rank: spec.rank,
         suit: spec.naipe,
         papel: 'hole',
-        visibilidade: vis,
+        visibilidade: 'verso',
       });
       playAudio('deal');
       await voar(el, holeEl(seat, hole), origem, cada);
@@ -692,38 +741,60 @@ function entrarDealVisual() {
   renderHud();
 }
 
+function aplicarMontagemNaHud(proxima, resultado) {
+  const payload = {
+    permutacao: resultado.permutacao,
+    cartasJogo: resultado.cartasJogo,
+    aceitarMontagem: true,
+  };
+  aplicar(sessao, proxima ? EVENTOS.PROXIMA_MAO : EVENTOS.INICIAR_MAO, payload);
+}
+
 async function iniciarMao({ proxima = false } = {}) {
-  if (ritualTrava) return;
+  if (ritualTrava || sessao.montagemEmCurso) return;
   ritualTrava = true;
+  sessao.montagemEmCurso = true;
   try {
     sessao.movimentoReduzido = reduzirMovimento();
     await unlockAudio();
+    if (proxima) {
+      await recolherCartas();
+      limparCartas();
+    }
+    const resultado = montarMao(sessao.misturaVisita);
+    if (resultado.status !== 'ok') {
+      aplicar(sessao, EVENTOS.FALHA_MONTAGEM);
+      atualizarPote();
+      renderHud();
+      return;
+    }
+    aplicarMontagemNaHud(proxima, resultado);
+    if (!sessao.mao || sessao.hud.estado !== 'deal') {
+      aplicar(sessao, EVENTOS.FALHA_MONTAGEM);
+      atualizarPote();
+      renderHud();
+      return;
+    }
     const clube = $('#clube');
-    aplicar(sessao, proxima ? EVENTOS.PROXIMA_MAO : EVENTOS.INICIAR_MAO);
     if (clube) {
       clube.dataset.mao = String(sessao.indiceMaoSessao);
       clube.classList.toggle('clube--mao-rapida', sessao.indiceMaoSessao >= 2);
     }
     atualizarPote();
-    if (proxima) {
-      await recolherCartas();
-    }
-    limparCartas();
-    atualizarPote();
     renderHud();
-    if (!sessao.mao) {
-      aplicar(sessao, EVENTOS.FALHA_DEAL);
-      renderHud();
-      return;
-    }
     await ritualHoles();
     await ritualFlop();
   } catch {
-    aplicar(sessao, EVENTOS.FALHA_DEAL);
+    if (sessao.hud.estado === 'deal') {
+      aplicar(sessao, EVENTOS.FALHA_DEAL);
+    } else {
+      aplicar(sessao, EVENTOS.FALHA_MONTAGEM);
+    }
     limparCartas();
     atualizarPote();
     renderHud();
   } finally {
+    sessao.montagemEmCurso = false;
     ritualTrava = false;
   }
 }
@@ -787,9 +858,13 @@ function onOpcao(id) {
   void depois;
 }
 
+function onPointerMove(evento) {
+  misturarCursor(sessao.misturaVisita, evento.clientX, evento.clientY);
+}
+
 export function bootMesa() {
   const clube = $('#clube');
-  if (!clube || ! $('#hud')) return;
+  if (!clube || !$('#hud')) return;
   if (window.location.protocol === 'file:') {
     clube.classList.add('clube--file');
     const aviso = $('.aviso-file');
@@ -797,6 +872,8 @@ export function bootMesa() {
   }
   sessao = criarSessao();
   sessao.movimentoReduzido = reduzirMovimento();
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  clube.addEventListener('pointermove', onPointerMove, { passive: true });
   renderHud();
   atualizarPote();
 }
