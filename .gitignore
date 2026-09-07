@@ -1,0 +1,21 @@
+# Dependências
+node_modules/
+
+# Ambiente e segredos
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# SO / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Build / cache
+dist/
+.cache/
+*.log
