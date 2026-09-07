@@ -8,6 +8,24 @@
 
 **Input**: User description: "Implementar o river com virada das hole cards adversárias e exatamente quatro perguntas em sequência (mão do herói uma vez só, mão de A, mão de B, quem ganhou), reusando o contrato 5.3 nas três categorias, vencedor pelo ranking completo RN-029 incluindo split e board que joga para todos, opções de pote montadas pela prioridade RN-031 (sempre 6 quando o universo permitir), desfecho visual e Próxima mão — conforme PRD §5.5 (RN-028, RN-029, RN-030, RN-031, RN-032, RN-033, RN-038, CA-018, CA-019, CA-020, CA-021, CA-027)"
 
+## Clarifications
+
+### Session 2026-09-07
+
+- Q: Enquanto as quatro perguntas do showdown ainda estão em curso, a mesa pode destacar o(s) vencedor(es) ou mover o bolo de fichas? → A: Não: destaque e movimento de fichas só no HUD `resultado`, depois do acerto de “quem ganhou” e do beat. Durante `deal` e as quatro perguntas, MUST NOT destacar vencedor nem mover o bolo (vazaria a certa).
+- Q: Se a mesa não conseguir classificar as três mãos ou comparar o pote, quando a mão aborta em relação às quatro perguntas? → A: Assim que as 11 cartas de jogo forem conhecidas (river pousado; MAY durante a virada), antes da primeira pergunta. O resultado fica pronto em memória. Se falhar, aborta (`ociosa` + **Nova mão**) e o quiz nem abre.
+- Q: As hole cards de Adversário A e de Adversário B viram ao mesmo tempo ou uma cadeira depois da outra? → A: Os dois assentos viram no mesmo beat. O HUD só sai de `deal` quando as quatro hole adversárias estão face-up.
+- Q: Quando o desfecho abre, o treinando já pode acionar **Próxima mão** ou precisa esperar as fichas terminarem de caminhar ou se dividir? → A: Já pode: **Próxima mão** habilita junto com `resultado` (após o beat de acerto). A caminhada/divisão é cenografia e MUST NOT bloquear o CTA.
+- Q: Depois de acertar a categoria de um jogador, esse rótulo permanece visível no HUD ou no assento enquanto as perguntas seguintes ainda rolam? → A: Não: cada pergunta nova substitui o HUD. Os três rótulos reaparecem juntos só em `resultado`. As 11 cartas permanecem abertas para o treinando reler.
+
+### Session 2026-09-07 (2)
+
+- Q: No desfecho, onde os três rótulos de categoria reaparecem e em que ordem? → A: No HUD, nesta ordem: **Você**, **Adversário A**, **Adversário B**. Os assentos só recebem o destaque de vencedor; MUST NOT colar rótulo nas cartas.
+- Q: Se a comparação do pote ainda não estiver pronta quando a virada termina, o que o treinando vê? → A: O HUD permanece em `deal` no máximo 1 segundo extra, sem spinner e sem texto “calculando”; se ainda não estiver pronta, a mão aborta (`ociosa` + **Nova mão**). MUST NOT abrir o quiz nessa espera.
+- Q: No desfecho, os assentos que perderam escurecem ou ficam iguais, só sem o destaque? → A: Não escurecem. Só o(s) vencedor(es) ganham destaque. As cartas dos perdedores permanecem plenamente legíveis.
+- Q: Depois da caminhada ou do split, as fichas cênicas ficam onde até **Próxima mão**? → A: Permanecem no(s) assento(s) vencedor(es) durante `resultado`. **Próxima mão** restaura o bolo no centro ao recolher a mão (reset cênico, sem contabilidade).
+- Q: No desfecho, a mesa pode contornar ou acender as cinco cartas da melhor mão de cada um? → A: Não. Só os três rótulos RN-014 no HUD. MUST NOT destacar o conjunto de 5 cartas (mostraria kickers na prática).
+
 ## User Scenarios & Testing *(mandatory)*
 
 Esta feature substitui o **stub** do showdown (mão do herói no river ainda Flush fixo; A e B ainda Par fixo; vencedor ainda provisório). O casco (001), o baralho honesto (002), o contrato de quiz (003), o avaliador da melhor 5 (004) e os upgrades reais do flop/turn (005) já existem. O valor é o treinando ler, com as **onze** cartas abertas, a categoria de cada um e **quem leva o pote** — inclusive empate e mesa que joga para todos — sem kickers no texto, sem segunda pergunta da mão do herói e sem upgrades no river.
@@ -23,13 +41,16 @@ O turn termina. A quinta comunitária pousa no slot 5. As hole cards de **Advers
 **Acceptance Scenarios**:
 
 1. **Given** o turn ainda não terminou (mão atual ou upgrades/skip do turn em curso), **When** o treinando procura o river ou as hole de A/B abertas, **Then** o river **não** abre e A/B permanecem fechados (RN-G002, RN-005).
-2. **Given** o turn completo, **When** a street river corre, **Then** o river pousa no slot 5 (burn visual opcional antes, se existir), **depois** as hole de A e B viram nos assentos, e **só então** o HUD sai de `deal` e a primeira pergunta fica respondível (CA-004, CA-018).
+2. **Given** o turn completo, **When** a street river corre, **Then** o river pousa no slot 5 (burn visual opcional antes, se existir), **depois** as hole de A e B viram **no mesmo beat** nos dois assentos, e **só então** o HUD sai de `deal` e a primeira pergunta fica respondível — nunca um assento aberto e o outro ainda fechado nessa hora (CA-004, CA-018).
 3. **Given** a primeira pergunta do showdown visível, **When** o treinando olha a mesa, **Then** as 6 hole cards e as 5 comunitárias estão face-up nos lugares certos; o treinando **não** precisa lembrar carta já virada (CA-018, RN-033).
 4. **Given** essa primeira pergunta, **When** o HUD entra em `perguntando`, **Then** o enunciado é exatamente **“Qual mão você tem agora?”**, há **exatamente 6** rótulos distintos da tabela canônica, seleção única, sem **Confirmar**, e a certa é a melhor categoria das 7 cartas do herói (2 hole + 5 comunitárias) (contrato 5.3, RN-013/028, CA-013, CA-027).
 5. **Given** o herói no river, **When** se conta as perguntas de categoria do herói nesta street, **Then** há **exatamente uma** — esta — e **não** uma segunda “mão atual” nem uma 5.4 (CA-027, RN-G002).
 6. **Given** a melhor 5 do herói usa 0 hole (as 5 comunitárias vencem qualquer combinação com 1 ou 2 hole), **When** o quiz avalia, **Then** a certa é a categoria dessa mesa; jogar o board é legal (RN-028).
 7. **Given** o acerto nesta pergunta e o beat encerrado, **When** a mesa avança, **Then** segue **“Qual mão o Adversário A completou?”** — **não** há upgrades, **não** há **Continuar** de skip de upgrade e **não** se repete a mão do herói.
 8. **Given** o river ainda voando ou A/B ainda virando, **When** o treinando tenta responder, **Then** o HUD permanece em `deal` sem opções clicáveis.
+9. **Given** as 11 cartas de jogo conhecidas e a classificação de qualquer mão ou a comparação do pote impossível de concluir, **When** a virada termina, **Then** a mão aborta (`ociosa` + **Nova mão`) **antes** da primeira pergunta; o quiz do showdown **não** abre.
+10. **Given** qualquer uma das quatro perguntas em curso, **When** o treinando olha os assentos e o pote cênico, **Then** **não** há destaque de vencedor e o bolo **não** saiu do centro.
+11. **Given** a virada de A e B já terminada e a comparação ainda não pronta, **When** o treinando espera, **Then** o HUD permanece em `deal` no máximo 1 segundo extra, sem spinner e sem “calculando”; se ainda não estiver pronta, a mão aborta e o quiz **não** abre.
 
 ---
 
@@ -51,6 +72,7 @@ Depois de acertar a mão do herói no river, o HUD pergunta **“Qual mão o Adv
 6. **Given** um board que joga para todos (ex.: royal nas cinco comunitárias), **When** as três perguntas de categoria aparecem, **Then** a certa é o **mesmo** rótulo canônico nas três (RN-028).
 7. **Given** A e B com categorias diferentes, **When** se comparam as duas perguntas, **Then** cada uma tem a própria certa (a de A não vale como certa na de B) e cada 1ª tentativa é uma exposição independente em `mao_atual` (RN-038).
 8. **Given** qualquer uma das três perguntas de categoria, **When** as opções aparecem, **Then** **não** há kicker, “par de reis”, naipe por extenso nem sinônimo fora dos 10 rótulos (RN-016, RN-G004).
+9. **Given** a mão do herói já acertada e a pergunta de A no HUD, **When** o treinando procura o rótulo da categoria do herói grudado no assento ou no painel, **Then** esse rótulo **não** está visível: o HUD mostra só a pergunta de A; as cartas do herói continuam abertas para reler.
 
 ---
 
@@ -73,6 +95,7 @@ Só depois das três categorias acertadas o HUD pergunta **“Quem ganhou o pote
 7. **Given** um único vencedor (Você, A ou B), **When** o treinando acerta de primeira ou após retry, **Then** o HUD vai a `resultado` depois do beat (CA-021).
 8. **Given** o enunciado e as opções de “quem ganhou”, **When** o treinando lê o texto, **Then** há 0 kickers, 0 ranks (“par de ases”) e 0 categorias RN-014 como opção (RN-G004).
 9. **Given** várias mãos cujo board empata dois ou três, **When** essas mãos ocorrem, **Then** o gerador **não** as substitui por um board que evite o empate (RN-G003).
+10. **Given** a pergunta “quem ganhou” visível, **When** o treinando olha a mesa, **Then** nenhum assento está destacado como vencedor e o bolo permanece no centro — o desfecho visual só vem depois do acerto.
 
 ---
 
@@ -86,12 +109,15 @@ Ao acertar quem ganhou, o HUD vai a `resultado`. A mesa destaca o(s) vencedor(es
 
 **Acceptance Scenarios**:
 
-1. **Given** um único vencedor acertado, **When** o HUD vai a `resultado`, **Then** indica quem levou com o texto canônico RN-030, destaca esse assento, as fichas caminham até ele, reitera as três categorias já identificadas e habilita **Próxima mão** (CA-021).
+1. **Given** um único vencedor acertado, **When** o HUD vai a `resultado`, **Then** indica quem levou com o texto canônico RN-030, destaca esse assento, as fichas caminham até ele, reitera as três categorias já identificadas e habilita **Próxima mão** **na hora** — sem esperar a caminhada das fichas terminar (CA-021).
 2. **Given** empate verdadeiro herói vs A acertado, **When** o desfecho aparece, **Then** o resultado celebra o empate (não um único champion), as fichas se dividem visualmente entre **Você** e **Adversário A**, e **Próxima mão** está habilitado (CA-020).
 3. **Given** **Os três empatam** acertado, **When** o desfecho aparece, **Then** os três assentos são celebrados e o bolo divide-se visualmente entre os três — sem valores em bb e sem contabilidade.
-4. **Given** o HUD em `resultado`, **When** o treinando lê as três categorias reiteradas, **Then** são exatamente os três rótulos RN-014 já acertados (herói, A, B), sem kicker e sem “par de reis”.
-5. **Given** o fim da rodada em `resultado`, **When** o treinando aciona **Próxima mão**, **Then** a mesa permanece, as cartas são recolhidas e uma nova mão é distribuída, de novo sem quiz preflop (CA-005, RN-043).
+4. **Given** o HUD em `resultado`, **When** o treinando lê as três categorias reiteradas, **Then** estão no HUD nesta ordem: **Você**, **Adversário A**, **Adversário B** — exatamente os três rótulos RN-014 já acertados, sem kicker, sem “par de reis” e **sem** rótulo colado nas cartas; esses três **não** estavam grudados nos assentos durante as perguntas anteriores.
+5. **Given** o fim da rodada em `resultado`, **When** o treinando aciona **Próxima mão** ainda com fichas a caminhar ou já no destino, **Then** a mesa permanece, as cartas são recolhidas, o bolo cênico volta ao centro e uma nova mão é distribuída, de novo sem quiz preflop (CA-005, RN-043).
 6. **Given** `resultado` ou `ociosa`, **When** o treinando procura um botão **Embaralhar**, **Then** esse nome de CTA **não** existe.
+7. **Given** um único vencedor em `resultado`, **When** o treinando olha os assentos que perderam, **Then** essas cadeiras **não** escurecem: só o vencedor está destacado e as cartas dos perdedores continuam plenamente legíveis.
+8. **Given** split ou vencedor único já no `resultado`, **When** as fichas terminam de caminhar ou se dividir (ou já aparecem no destino se o movimento for reduzido), **Then** elas permanecem no(s) assento(s) vencedor(es) até **Próxima mão**.
+9. **Given** o HUD em `resultado`, **When** o treinando olha o board e as hole, **Then** **nenhum** conjunto de 5 cartas está contornado ou aceso como “a mão que ganhou”; só os rótulos no HUD e o destaque de assento.
 
 ---
 
@@ -152,7 +178,12 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 - As quatro perguntas **nunca** aparecem juntas (RN-G001). Tentar o vencedor antes das três categorias: o HUD simplesmente ainda não mostra “quem ganhou”.
 - Recarregar no meio do showdown: a mão aborta (casco); contadores já gravados permanecem. MUST NOT pedir dado pessoal para retomar.
 - Armazenamento indisponível: o quiz e a comparação do pote seguem; a evolução MAY perder-se ao fechar (fail-open da 003).
-- Se a classificação de uma das três mãos ou a comparação do pote não puder ser concluída, a mão aborta: HUD `ociosa` + **Nova mão**. MUST NOT inventar vencedor, MUST NOT fingir **Os três empatam**, MUST NOT persistir cartas nem dump da comparação.
+- A classificação das três melhores 5 e a comparação do pote MUST estar prontas em memória assim que as 11 cartas de jogo forem conhecidas (river pousado; MAY durante a virada). Se qualquer classificação ou a comparação não puder ser concluída, a mão aborta **antes** da primeira pergunta: HUD `ociosa` + **Nova mão**. MUST NOT abrir o quiz se o showdown não puder ser cobrado por completo. MUST NOT inventar vencedor, MUST NOT fingir **Os três empatam**, MUST NOT persistir cartas nem dump da comparação. Se a virada já terminou e o resultado ainda não está pronto, o HUD permanece em `deal` no máximo 1 segundo extra, sem spinner e sem jargão; findo esse teto sem sucesso, a mão aborta. Se a impossibilidade só for detectada depois (defesa), a mão também aborta; contadores já gravados nesta visita permanecem.
+- Destaque de vencedor e caminhada/divisão do bolo MUST ocorrer só em `resultado`, após o acerto de “quem ganhou” e o beat. Durante `deal` e as quatro perguntas, o bolo permanece no centro e nenhum assento é marcado como vencedor (vazaria a certa).
+- Virada de A e B: os dois assentos viram no **mesmo beat**. O HUD MUST NOT sair de `deal` com um adversário aberto e o outro fechado.
+- Cada pergunta nova substitui o HUD. MUST NOT grudar o rótulo acertado no assento ou no painel enquanto as perguntas seguintes ainda rolam. Os três rótulos RN-014 reaparecem juntos só em `resultado`, no HUD, nesta ordem: **Você**, **Adversário A**, **Adversário B**. MUST NOT colar rótulo nas cartas. MUST NOT contornar nem acender as cinco cartas da melhor mão de ninguém.
+- Assentos que perderam MUST NOT escurecer. Só o(s) vencedor(es) recebem destaque; as 11 cartas permanecem plenamente legíveis.
+- **Próxima mão** habilita na entrada de `resultado`. A cenografia das fichas MUST NOT bloquear o CTA; acionar no meio da caminhada recolhe a mão normalmente. Durante `resultado`, as fichas que já caminharam ou se dividiram permanecem no(s) assento(s) vencedor(es). **Próxima mão** restaura o bolo cênico no centro ao recolher.
 - Clique em morta / fora das opções: ignora.
 - Preferência por reduzir movimento: o contrato de correção não depende de animação; virada e caminhada de fichas MAY cortar para o estado final; o beat de acerto permanece o da 003.
 - MUST NOT persistir cartas, Melhor5, chave de desempate, pool de cursor, enunciado, carimbo de data/hora ou identificador pessoal. Só os deltas já definidos em `mao_atual` (três exposições) e `vencedor_pote` (uma exposição).
@@ -162,9 +193,9 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 
 ### Functional Requirements
 
-- **FR-001**: Depois de o turn estar completo (mão atual acertada e upgrades ou skip encerrados), a mesa MUST abrir o river no slot 5 e, em seguida, virar as hole cards de **Adversário A** e **Adversário B** nos respectivos assentos. O HUD MUST permanecer em `deal` sem opções clicáveis até a virada terminar. MUST NOT habilitar a primeira pergunta com A ou B ainda fechados (RN-005, CA-018).
-- **FR-002**: Quando a primeira pergunta do showdown aparecer, as 6 hole cards e as 5 comunitárias MUST estar face-up nos lugares certos (CA-018, RN-033). Burns cênicos MUST NOT entrar no board nem nas 7 cartas de ninguém.
-- **FR-003**: O river MUST apresentar **exatamente quatro** perguntas, nesta ordem, cada uma só depois da anterior acertada e do beat encerrado: (1) mão do herói, (2) mão de A, (3) mão de B, (4) quem ganhou o pote. MUST haver no máximo uma pergunta por vez (RN-G001). MUST NOT existir pergunta de upgrades (5.4) no river (RN-G002).
+- **FR-001**: Depois de o turn estar completo (mão atual acertada e upgrades ou skip encerrados), a mesa MUST abrir o river no slot 5 e, em seguida, virar as hole cards de **Adversário A** e **Adversário B** nos respectivos assentos **no mesmo beat**. O HUD MUST permanecer em `deal` sem opções clicáveis até a virada dos **dois** assentos terminar. MUST NOT habilitar a primeira pergunta com A ou B ainda fechados, nem com um aberto e o outro fechado (RN-005, CA-018).
+- **FR-002**: Quando a primeira pergunta do showdown aparecer, as 6 hole cards e as 5 comunitárias MUST estar face-up nos lugares certos (CA-018, RN-033). As 11 cartas MUST permanecer face-up até **Próxima mão** recolher o feltro. Burns cênicos MUST NOT entrar no board nem nas 7 cartas de ninguém.
+- **FR-003**: O river MUST apresentar **exatamente quatro** perguntas, nesta ordem, cada uma só depois da anterior acertada e do beat encerrado: (1) mão do herói, (2) mão de A, (3) mão de B, (4) quem ganhou o pote. MUST haver no máximo uma pergunta por vez (RN-G001). Cada pergunta nova MUST substituir o HUD da anterior. MUST NOT grudar o rótulo acertado no assento ou no painel enquanto as perguntas seguintes ainda rolam. MUST NOT existir pergunta de upgrades (5.4) no river (RN-G002).
 - **FR-004**: A pergunta do herói no river MUST ser a **única** identificação de categoria do herói nesta street. O enunciado MUST ser exatamente **“Qual mão você tem agora?”**. MUST NOT haver uma segunda pergunta de mão atual do herói no river (CA-027).
 - **FR-005**: O enunciado de A MUST ser exatamente **“Qual mão o Adversário A completou?”**. O enunciado de B MUST ser exatamente **“Qual mão o Adversário B completou?”**. O enunciado do pote MUST ser exatamente **“Quem ganhou o pote?”**.
 - **FR-006**: Cada uma das três perguntas de categoria MUST reusar o contrato 5.3 já vigente: seleção única, clique submete, sem **Confirmar**, exatamente 6 rótulos distintos de RN-014 incluindo a certa, ordem visual embaralhada só ao apresentar a pergunta nova, retry até acertar, textos **“Não é essa. Tente de novo.”** / **“Você acertou”**, opção morta visível no lugar, certa só marcada como certa quando escolhida (RN-047, RN-034, RN-035, RN-036, RN-G005, RN-G008, CA-013).
@@ -178,18 +209,19 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 - **FR-014**: A pergunta do pote MUST ser seleção única, clique submete, sem **Confirmar**, retry até acertar, com o mesmo contrato visual da 003 (RN-047, RN-G005).
 - **FR-015**: Só a **primeira** tentativa de cada uma das três perguntas de categoria MUST alterar `mao_atual`, na categoria **correta daquele jogador** (acerto ou erro), imediatamente. Chutar um rótulo distrator MUST NOT incrementar esse rótulo. As três exposições MUST ser independentes. MUST NOT fundir deltas só porque dois jogadores compartilham o rótulo (RN-038, RN-019).
 - **FR-016**: Só a **primeira** tentativa de “quem ganhou” MUST alterar `vencedor_pote` (acerto ou erro). Esse bucket MUST permanecer um único grupo — MUST NOT ter dez categorias. Tentativas seguintes MUST NOT alterar contadores. Esta pergunta MUST NOT alterar `mao_atual` nem `upgrade` (RN-032).
-- **FR-017**: Dado o acerto do vencedor e o beat encerrado, o HUD MUST ir a `resultado`: texto canônico de quem levou (RN-030), destaque visual no(s) assento(s) vencedor(es), caminhada do bolo de fichas até o vencedor único **ou** divisão visual entre os empatados, reiteração das três categorias já identificadas (rótulos RN-014) e CTA **Próxima mão** (CA-021, CA-020). MUST NOT exibir valores em bb, contabilidade, kicker ou chave de desempate.
-- **FR-018**: **Próxima mão** MUST recolher as cartas e distribuir uma nova mão na mesma mesa, sem reload perceptível e de novo sem quiz preflop. MUST NOT usar “Embaralhar” como nome de botão (RN-043, CA-005).
+- **FR-017**: Dado o acerto do vencedor e o beat encerrado, o HUD MUST ir a `resultado`: texto canônico de quem levou (RN-030); destaque visual **somente** no(s) assento(s) vencedor(es) — os que perderam MUST NOT escurecer; caminhada do bolo até o vencedor único **ou** divisão visual entre os empatados, com as fichas permanecendo nesse(s) assento(s) até **Próxima mão**; reiteração das três categorias já identificadas **no HUD**, nesta ordem: **Você**, **Adversário A**, **Adversário B** (rótulos RN-014); CTA **Próxima mão** habilitado **imediatamente** — MUST NOT esperar a caminhada/divisão das fichas para habilitar o CTA (CA-021, CA-020). MUST NOT colar rótulo nas cartas. MUST NOT contornar nem acender as cinco cartas da melhor mão de ninguém. MUST NOT exibir valores em bb, contabilidade, kicker ou chave de desempate. MUST NOT destacar vencedor nem mover o bolo **antes** deste estado.
+- **FR-018**: **Próxima mão** MUST recolher as cartas, restaurar o bolo cênico no centro e distribuir uma nova mão na mesma mesa, sem reload perceptível e de novo sem quiz preflop, mesmo se acionado enquanto as fichas ainda caminham ou se dividem. MUST NOT usar “Embaralhar” como nome de botão (RN-043, CA-005).
 - **FR-019**: O gerador da mão MUST NOT evitar boards que empatam dois ou três jogadores. Empates de pote MUST fazer parte do treino (RN-G003).
 - **FR-020**: Cada um dos sete textos RN-030 MUST ser a resposta correta do pote em pelo menos um showdown alcançável. Cada um dos dez rótulos RN-014 MUST ser a certa de pelo menos um jogador (herói, A ou B) em algum river.
 - **FR-021**: MUST NOT persistir cartas, Melhor5, ranks de kicker, chave de desempate, enunciado, opções, pool de cursor, carimbo de data/hora, identificador de sessão ou qualquer dado pessoal. O único efeito persistido desta feature MUST ser o delta de 1ª tentativa em `mao_atual` (três perguntas) e em `vencedor_pote` (uma pergunta), no mesmo bloco de evolução já definido — sem novos buckets, sem relatório, sem botão zerar.
 - **FR-022**: Toda interface visível desta feature (enunciados, 10 rótulos, 7 textos de pote, feedback herdado, desfecho, CTAs) MUST estar em português brasileiro, com termos de clube flop/turn/river/showdown permitidos. Apelidos MUST permanecer **Você**, **Adversário A**, **Adversário B**.
 - **FR-023**: MUST NOT introduzir apostas, quiz preflop, desistir da mão, mute na UI, cadastro, login, multiplayer, relatório visual, botão zerar, draws nomeados, nem alterar a honestidade do baralho ou o contrato de upgrades da 005.
 - **FR-024**: Se a memória de treino falhar, a virada, as quatro perguntas e o desfecho MUST continuar; a evolução MAY perder-se ao fechar. MUST NOT haver `alert()` nem jargão que bloqueie o HUD.
-- **FR-025**: Se a classificação de qualquer uma das três mãos ou a comparação do pote não puder ser concluída, a mesa MUST abortar a mão: HUD `ociosa` + **Nova mão**. MUST NOT inventar categoria, MUST NOT inventar vencedor, MUST NOT fingir lista vazia nem **Os três empatam** por falha. Contadores já gravados nesta visita MUST permanecer. MUST NOT persistir dump da comparação.
+- **FR-025**: A classificação das três melhores 5 e a comparação do pote MUST estar determinadas assim que as 11 cartas de jogo forem conhecidas (river pousado; MAY durante a virada). O resultado MUST permanecer só em memória da visita. Se qualquer classificação ou a comparação não puder ser concluída, a mesa MUST abortar a mão **antes** da primeira pergunta: HUD `ociosa` + **Nova mão**. MUST NOT abrir o quiz se o showdown não puder ser cobrado por completo. MUST NOT inventar categoria, MUST NOT inventar vencedor, MUST NOT fingir lista vazia nem **Os três empatam** por falha. Se a virada já terminou e a determinação ainda não estiver pronta, o HUD MUST permanecer em `deal` no máximo **1 segundo** extra, sem spinner e sem texto “calculando”; findo esse teto sem sucesso, a mão MUST abortar. Se a impossibilidade só for detectada depois (defesa), a mão também aborta; contadores já gravados nesta visita MUST permanecer. MUST NOT persistir dump da comparação.
 - **FR-026**: Esta feature MUST substituir as corretas stub do river (herói Flush, A/B Par, vencedor provisório). MUST NOT redesenhar a identificação da mão atual do flop/turn (004) nem os upgrades (005). MUST NOT alterar `upgrade` por causa do showdown.
 - **FR-027**: Todos os CTAs visíveis desta feature (**Próxima mão**, e **Nova mão** se a mão abortar) e as opções das quatro perguntas MUST permanecer alcançáveis por Tab e ativáveis com Enter/Espaço, com foco visível, como no casco. Ao abrir cada pergunta, o foco MUST ir para a primeira opção na ordem visual.
 - **FR-028**: Preferência por reduzir movimento MUST permitir que a virada e a caminhada/divisão de fichas apareçam já no estado final; o quiz MUST tratar as cartas como abertas. O beat de acerto MUST permanecer o já vigente (≤1 s; 0 s se movimento reduzido).
+- **FR-029**: Durante `deal` e durante qualquer uma das quatro perguntas, a mesa MUST NOT destacar assento como vencedor nem mover ou dividir o bolo de fichas. Esse desfecho visual MUST ocorrer só em `resultado` após o acerto de “quem ganhou” e o beat (RN-G005).
 
 ### Key Entities
 
@@ -200,7 +232,7 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 - **Pergunta do pote**: exposição de seleção única no HUD, enunciado **“Quem ganhou o pote?”**, 6 textos RN-030, uma correta. Uma exposição em `vencedor_pote`.
 - **Universo de pote**: os 7 textos fixos de RN-030. O conjunto exibido é um recorte de 6 pela prioridade RN-031.
 - **Conjunto vencedor**: um, dois ou três assentos cuja chave RN-029 é máxima e empatada entre si. Mapeia 1-para-1 a um texto RN-030.
-- **Desfecho**: estado `resultado` após acertar o pote. Atributos: texto de quem levou, assentos destacados, movimento do pote cênico (caminha ou divide), três rótulos já acertados, CTA **Próxima mão**.
+- **Desfecho**: estado `resultado` após acertar o pote. Atributos: texto de quem levou, assentos vencedores destacados (perdedores não escurecem), movimento do pote cênico (caminha ou divide; fichas ficam no(s) vencedor(es) até **Próxima mão**; MUST NOT bloquear o CTA), três rótulos RN-014 reiterados no HUD na ordem Você / Adversário A / Adversário B, CTA **Próxima mão** habilitado na entrada. MUST NOT destacar o conjunto de 5 cartas.
 - **Primeira tentativa**: o primeiro clique que submete naquela pergunta; único evento que altera o bucket correspondente.
 
 ### Fora de escopo (esta feature)
@@ -220,7 +252,7 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 - **SC-002**: Em 100% dos rivers, há exatamente **uma** pergunta de categoria do herói e **zero** perguntas de upgrades (CA-027).
 - **SC-003**: Dado Adversário A com Flush e herói com Par, em 100% desses showdowns a certa da pergunta de A é **Flush**, com 6 opções e retry até acertar (CA-019).
 - **SC-004**: Dado empate verdadeiro herói vs A (mesmas 5 efetivas, B atrás), em 100% dos casos a certa de “quem ganhou” é **Você e Adversário A** e, após o acerto, as fichas se dividem visualmente entre os dois (CA-020).
-- **SC-005**: Dado um único vencedor acertado, em 100% dos casos o HUD vai a `resultado`, indica quem levou e habilita **Próxima mão** (CA-021).
+- **SC-005**: Dado um único vencedor acertado, em 100% dos casos o HUD vai a `resultado`, indica quem levou e habilita **Próxima mão** imediatamente — 0 vezes o CTA espera a caminhada das fichas (CA-021).
 - **SC-006**: Em 100% das três perguntas de categoria do river, há exatamente 6 rótulos distintos da tabela canônica, incluindo o correto, e em qualquer sequência de 10 perguntas novas a certa **não** ocupa a mesma posição em todas (CA-013, RN-G008).
 - **SC-007**: Em 100% das perguntas do pote, há exatamente 6 textos distintos do universo de 7, a correta está inclusa, o conjunto obedece RN-031 e 0 kickers / 0 categorias aparecem como opção.
 - **SC-008**: Em 100% dos boards em que as 5 comunitárias são royal, as três certas de categoria são **Royal flush** e a certa do pote é **Os três empatam**.
@@ -231,17 +263,22 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 - **SC-013**: Em 100% dos acertos da mão do herói no river, a mesa segue para a pergunta de A; 0 desses acertos abrem upgrades ou repetem a mão do herói.
 - **SC-014**: Em 100% das tentativas de ver “quem ganhou” antes das três categorias, essa pergunta **não** está visível.
 - **SC-015**: Cada um dos 7 textos RN-030 é a certa do pote em ≥1 showdown; cada um dos 10 rótulos RN-014 é a certa de ≥1 jogador em algum river.
-- **SC-016**: Em 100% dos desfechos, há 0 valores em bb, 0 kickers e 0 chaves de desempate visíveis; split de dois ou três celebra empate, não um único champion.
+- **SC-016**: Em 100% dos desfechos, há 0 valores em bb, 0 kickers, 0 chaves de desempate visíveis e 0 contornos das cinco cartas da melhor mão; split de dois ou três celebra empate, não um único champion.
 - **SC-017**: Em 100% das UIs desta feature, enunciados e opções têm 0 kickers, 0 “par de reis” e 0 sinônimos fora dos rótulos/textos canônicos.
 - **SC-018**: 0 coletas de dado pessoal; 0 persistência de cartas, Melhor5, kicker ou replay; o único efeito que sobrevive ao fechar a aba continua sendo a evolução de treino já definida.
-- **SC-019**: Em 100% das falhas de classificação ou comparação do pote, o HUD volta a `ociosa` com **Nova mão**; 0 vencedores inventados; 0 dumps persistidos.
-- **SC-020**: Em 100% das mãos que concluem o showdown, acionar **Próxima mão** inicia um novo deal na mesma mesa sem quiz preflop e sem reload perceptível.
+- **SC-019**: Em 100% das falhas de classificação ou comparação do pote detectadas com as 11 cartas conhecidas, o HUD volta a `ociosa` com **Nova mão** **antes** da primeira pergunta; 0 quizzes de showdown abertos após falha; 0 vencedores inventados; 0 dumps persistidos. Se a virada já acabou e o resultado ainda não está pronto, 100% dos casos permanecem em `deal` ≤1 s extra sem spinner; findo o teto, abortam.
+- **SC-020**: Em 100% das mãos que concluem o showdown, acionar **Próxima mão** inicia um novo deal na mesma mesa sem quiz preflop e sem reload perceptível, inclusive se as fichas ainda caminhavam; o bolo cênico volta ao centro.
 - **SC-021**: Em 100% das perguntas novas desta feature, o foco de teclado começa na primeira opção visual; após erro, 100% das retries mantêm a ordem dos botões.
+- **SC-022**: Em 100% dos instantes de `deal` e das quatro perguntas, há 0 destaques de vencedor e 0 movimentos do bolo; destaque e fichas só em `resultado`.
+- **SC-023**: Em 100% das viradas de showdown, A e B ficam face-up no mesmo beat; 0 perguntas com um adversário aberto e o outro fechado.
+- **SC-024**: Em 100% das transições entre as quatro perguntas, o HUD substitui o painel anterior; 0 rótulos de categoria grudados no assento ou no HUD até `resultado`, onde os três reaparecem juntos no HUD na ordem **Você**, **Adversário A**, **Adversário B**.
+- **SC-025**: Em 100% dos desfechos, 0 assentos perdedores escurecem; só o(s) vencedor(es) estão destacados e as 11 cartas permanecem legíveis.
+- **SC-026**: Em 100% dos `resultado` após a caminhada/divisão (ou corte imediato se movimento reduzido), as fichas cênicas estão no(s) assento(s) vencedor(es) até **Próxima mão**.
 
 ## Assumptions
 
 - **Git / numeração**: o diretório da feature é `specs/006-showdown-vencedor/` (ShortName `showdown-vencedor`, número **006**, sequential). Não há `.specify/extensions.yml` nem hook `before_specify`; o repositório permanece em `main` (pedido explícito). Identidade da spec: `006-showdown-vencedor`. O campo `BRANCH_NAME` do script de bootstrap é só o slug do diretório — **não** se criou branch Git. **Não** houve commit nesta invocação.
-- **Fonte de verdade**: comportamento desta spec = PRD §5.5 (RN-028, RN-029, RN-030, RN-031, RN-032, RN-033, RN-038, CA-018, CA-019, CA-020, CA-021, CA-027) + contrato 5.3 reusado (RN-013, RN-014, RN-015, RN-016, RN-017, RN-018, RN-019, RN-046, CA-013) + RN-G001, RN-G002, RN-G003, RN-G004, RN-G005, RN-G008 + contrato de quiz/persistência da feature 003 + avaliador de melhor 5 da feature 004 + cadência e virada da feature 001 + gates da constitution (idioma, LGPD, custo zero, treino e não jogo, fail-open). Nenhum `[NEEDS CLARIFICATION]` residual.
+- **Fonte de verdade**: comportamento desta spec = PRD §5.5 (RN-028, RN-029, RN-030, RN-031, RN-032, RN-033, RN-038, CA-018, CA-019, CA-020, CA-021, CA-027) + contrato 5.3 reusado (RN-013, RN-014, RN-015, RN-016, RN-017, RN-018, RN-019, RN-046, CA-013) + RN-G001, RN-G002, RN-G003, RN-G004, RN-G005, RN-G008 + contrato de quiz/persistência da feature 003 + avaliador de melhor 5 da feature 004 + cadência e virada da feature 001 + gates da constitution (idioma, LGPD, custo zero, treino e não jogo, fail-open) + decisões em **Clarifications**. Nenhum `[NEEDS CLARIFICATION]` residual.
 - **Escolha autônoma — copy do herói no river**: o fluxo narrativo do §5.5 diz “Qual mão você completou?”; o contrato 5.3 e o casco 001 já fixam **“Qual mão você tem agora?”** como 1ª pergunta do river. Adotado: manter **“Qual mão você tem agora?”** para o herói (reuso literal do 5.3) e **“completou”** só nos enunciados de A e B já gravados na 001.
 - **Escolha autônoma — ranking que o PRD não lista por extenso**: RN-029 detalha quadra, full house, flush, straight, dois pares, par e carta alta. Completado pelo desempate padrão de Hold’em: **Trinca** = rank da trinca + dois kickers; **Straight flush** = topo (wheel = 5); **Royal flush** = sempre A-K-Q-J-10 (empate se mais de um tiver royal). Naipe **não** desempatar em categoria alguma. Alinha-se ao ADR-003 e a CA-020.
 - **Escolha autônoma — “5 cartas efetivas”**: empate verdadeiro = a chave RN-029 (categoria + ranks que definem a mão) é idêntica, não necessariamente as mesmas peças físicas. Dois jogadores que jogam a mesma mesa, ou que formam a mesma chave com hole diferentes, empatam.
@@ -252,10 +289,20 @@ O treinando encontra os extremos que o stub escondia. Royal no board é **Royal 
 - **Escolha autônoma — cobertura**: os 7 textos de pote e as 10 categorias precisam ser a certa em pelo menos um caso, no mesmo espírito da 004/005, para o stub não sobreviver em algum canto.
 - **Escolha autônoma — foco**: primeira opção visual ao abrir cada pergunta, alinhado ao HUD `perguntando` da 001/003/005.
 - **Escolha autônoma — desfecho**: reiterar as três categorias já acertadas com os rótulos RN-014; destacar assento(s); fichas caminham ou se dividem. Sem bb. Herda o pote cênico da 001; esta feature torna o destino das fichas **autoritativo** (único vs split).
+- **Escolha autônoma — sem vazar o pote (clarify)**: destacar vencedor ou mover fichas durante as perguntas revelaria “quem ganhou” (RN-G005). Desfecho visual só em `resultado`.
+- **Escolha autônoma — momento da comparação (clarify)**: determinar as três melhores 5 e o pote assim que as 11 cartas forem conhecidas, no mesmo espírito da lista de upgrades no pouso das comunitárias (005). Abrir o quiz sem poder cobrá-lo treinaria a lição errada ou abortaria no meio com exposições parciais.
+- **Escolha autônoma — virada simultânea (clarify)**: A e B no mesmo beat evita um instante em que só um adversário está aberto (RN-033 / CA-018).
+- **Escolha autônoma — CTA imediato (clarify)**: **Próxima mão** não espera a cenografia das fichas; movimento reduzido já corta para o estado final (FR-028). Bloquear o CTA faria a mesa parecer travada.
+- **Escolha autônoma — rótulos só no desfecho (clarify)**: grudar categoria no assento entre perguntas transformaria o treino em memória de rótulo; as 11 cartas abertas bastam para reler.
+- **Escolha autônoma — ordem no HUD (clarify)**: Você → A → B, a mesma ordem das perguntas, para o desfecho ser escaneável. Rótulo nas cartas competiria com a face.
+- **Escolha autônoma — espera após virada (clarify)**: teto de 1 s extra em `deal`, alinhado ao beat da 005; sem spinner (jargão) e sem quiz pela metade.
+- **Escolha autônoma — perdedores legíveis (clarify)**: escurecer violaria RN-033 (cartas já viradas precisam continuar líveis). Destaque só no vencedor basta.
+- **Escolha autônoma — fichas no assento (clarify)**: o pote cênico da 001 volta ao centro em **Próxima mão**; durante `resultado` as fichas testemunham quem levou, sem bb.
+- **Escolha autônoma — sem acender a melhor 5 (clarify)**: contornar as cinco cartas mostraria kickers na prática (RN-G004). O HUD reitera só o rótulo.
 - **Dependências**: 001 (palco, virada, estados, **Próxima mão**, teclado), 002 (11 cartas honestas; burns não consomem; gerador não evita empate), 003 (clique-submete, retry, G008, `mao_atual` / `vencedor_pote` na 1ª tentativa), 004 (melhor 5, RN-017, taxonomia), 005 (turn completo antes do river; 0 upgrades no river). Esta feature **não** redesenha esses contratos.
 - **Stub que some**: as corretas provisórias do river (herói Flush, A/B Par, vencedor do casco) **deixam** de valer. A certa passa a ser a melhor 5 de cada um e o ranking completo do pote. A cadência de quatro passos e o `resultado` permanecem observáveis, agora autoritativos.
 - **Copy canônica herdada**: herói = “Qual mão você tem agora?”; A = “Qual mão o Adversário A completou?”; B = “Qual mão o Adversário B completou?”; pote = “Quem ganhou o pote?”; acerto = “Você acertou”; erro = “Não é essa. Tente de novo.”; CTA de desfecho = **Próxima mão**. Sem sinônimos.
 - **Privacidade**: apelidos fixos **Você**, **Adversário A**, **Adversário B**; avatares ilustrados. Recarregar aborta a mão e não apaga evolução já gravada. Coordenadas de ponteiro da 002 continuam só em memória da visita. Melhor5, kickers, chave de desempate e cartas MUST NOT ser persistidos.
 - **Constitution como constraint**: sem backend, sem cadastro, custo zero, sem relatório/zerar, desktop-first, fail-open, RN-G001..G008. Comparar três mãos no cliente, sem lib de poker, já está decidido no **ADR-003**. Detalhe de implementação fica para `/speckit-plan`.
 - **Idioma**: UI em pt-BR; identificadores internos podem estar em inglês.
-- **Clarify / plan / tasks / implement**: esta invocação é só `/speckit-specify`. **Não** executa clarify/plan/tasks/implement, **não** altera código de produção e **não** cria commit. Diante de ambiguidade, adotou-se o padrão acima e registrou-se aqui.
+- **Clarify / plan / tasks / implement**: `/speckit-clarify` sessões 1 e 2 (2026-09-07) gravaram dez decisões em **Clarifications**. Esta invocação **não** executa plan/tasks/implement, **não** altera código de produção e **não** cria commit.
