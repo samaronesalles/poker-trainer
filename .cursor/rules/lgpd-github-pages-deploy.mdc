@@ -1,0 +1,46 @@
+---
+description: Deploy no GitHub Pages só com estáticos públicos; sem telemetria nem dado de treino
+globs: .github/workflows/**/*.yml,index.html,js/**/*.js
+alwaysApply: false
+---
+
+# LGPD — Deploy estático no GitHub Pages
+
+## Contexto
+O treino é site estático público (ADR-001). O workflow de Pages sobe arquivos do produto para infraestrutura do GitHub (fora do Brasil). A evolução e a mão ficam só no navegador do titular; o artefato publicado não pode carregar dado de sessão, dump do motor nem telemetria.
+
+## Artigo(s) LGPD aplicável(is)
+- Art. 6º, III (necessidade): publicar só o que o treino precisa para rodar.
+- Art. 46 §2º (privacy by design): o pacote de deploy não inclui estado do jogador.
+- Art. 33: transferência internacional do **código** do produto é a hospedagem já aceita; não se transfere dado pessoal de treino.
+
+## Regra
+NUNCA inclua no artefato do Pages `tests/`, `docs/`, `.cursor/`, dumps, snapshots, `Melhor5`, `chaveDesempate` ou qualquer JSON de evolução.
+NUNCA adicione `fetch` de telemetria, analytics, pixel ou log remoto no site publicado.
+SEMPRE publique somente `index.html`, `css/`, `js/` e `assets/`.
+SEMPRE mantenha apelidos e avatares de produto; sem upload de foto nem campo de nome.
+
+## Exemplo INCORRETO
+```yaml
+- uses: actions/upload-pages-artifact@v4
+  with:
+    path: '.'
+# site com gtag / fetch('https://analytics.example/hit')
+```
+
+## Exemplo CORRETO
+```yaml
+- run: |
+    mkdir -p _site
+    cp index.html _site/
+    cp -r css js assets _site/
+- uses: actions/upload-pages-artifact@v4
+  with:
+    path: _site
+```
+
+## Quando esta rule NÃO se aplica
+- Desenvolvimento local com servidor estático (`http://localhost`), sem publicar Pages.
+
+## Histórico
+- Criada ao adicionar o workflow de deploy por tag/release no GitHub Pages.
