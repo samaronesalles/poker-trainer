@@ -1,5 +1,6 @@
 /** Contrato de pergunta, feedback e 1ª tentativa. Motor em flop/turn + upgrades no pouso + showdown no river. */
 
+import { rotuloPoteCurto, streetVisivel } from './layout.js';
 import {
   CATEGORIAS,
   UNIVERSO_POTE,
@@ -17,6 +18,7 @@ export const COPY = Object.freeze({
   ctaProximaMao: 'Próxima mão',
   ctaContinuar: 'Continuar',
   ctaConfirmar: 'Confirmar',
+  ctaNenhuma: 'Nenhuma',
   semUpgrade: 'Não há upgrade possível.',
   linhaErroEnumeracao: 'Não foi possível continuar esta mão. Tente de novo.',
   enunciadoHero: 'Qual mão você tem agora?',
@@ -24,8 +26,10 @@ export const COPY = Object.freeze({
   enunciadoA: 'Qual mão o Adversário A completou?',
   enunciadoB: 'Qual mão o Adversário B completou?',
   enunciadoPote: 'Quem ganhou o pote?',
+  hintMultipla: 'Pode ser mais de uma.',
   acerto: 'Você acertou',
   erro: 'Não é essa. Tente de novo.',
+  revelado: 'Estas são as mãos ainda possíveis.',
 });
 
 export const APELIDOS = Object.freeze({
@@ -84,6 +88,7 @@ function baseOpcao(item, tipo, verdadeira) {
   return {
     id: item.id,
     rotulo: item.rotulo,
+    rotuloCurto: tipo === 'vencedor' ? rotuloPoteCurto(item.id) : item.rotulo,
     tipo,
     verdadeira,
     correta: verdadeira,
@@ -245,6 +250,32 @@ export function criarOpcoesUpgrade(conjunto, rng = Math.random) {
   );
 }
 
+export function streetVisivelDoPasso(passo) {
+  if (
+    passo === PASSOS.flop_hero ||
+    passo === PASSOS.flop_upgrade ||
+    passo === PASSOS.flop_skip
+  ) {
+    return streetVisivel('flop');
+  }
+  if (
+    passo === PASSOS.turn_hero ||
+    passo === PASSOS.turn_upgrade ||
+    passo === PASSOS.turn_skip
+  ) {
+    return streetVisivel('turn');
+  }
+  if (
+    passo === PASSOS.river_hero ||
+    passo === PASSOS.river_a ||
+    passo === PASSOS.river_b ||
+    passo === PASSOS.river_vencedor
+  ) {
+    return streetVisivel('river');
+  }
+  return null;
+}
+
 export function enunciadoDoPasso(passo) {
   switch (passo) {
     case PASSOS.flop_hero:
@@ -339,6 +370,20 @@ function conjuntoExibidoPerfeito(opcoes) {
   return todasVerdadeiras && nenhumaDistratora;
 }
 
+export function revelacaoCompleta(opcoes) {
+  return Array.isArray(opcoes) && opcoes.length > 0 && opcoes.every((item) => !item.ativavel);
+}
+
+export function atualizarCtaMultipla(sessao) {
+  if (!sessao?.hud || !sessao.mao) return;
+  if (revelacaoCompleta(sessao.hud.opcoes)) {
+    sessao.hud.cta = { nome: COPY.ctaContinuar, desabilitado: false };
+    return;
+  }
+  const alguma = sessao.hud.opcoes.some((item) => item.ativavel && item.selecionada);
+  sessao.hud.cta = { nome: COPY.ctaConfirmar, desabilitado: !alguma };
+}
+
 function limparFeedback(sessao) {
   sessao.hud.feedback = null;
   sessao.hud.feedbackTexto = null;
@@ -365,6 +410,8 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
   sessao.hud.enunciado = enunciadoDoPasso(passo);
   sessao.hud.linhaProposito = null;
   sessao.hud.linhaErro = null;
+  sessao.hud.hint = null;
+  sessao.hud.street = streetVisivelDoPasso(passo);
   limparFeedback(sessao);
 
   if (passo === PASSOS.river_vencedor) {
@@ -383,7 +430,8 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
     sessao.mao.corretaUnica = null;
     sessao.mao.conjuntoCorreto = [...(conjunto.verdadeiros ?? [])];
     sessao.hud.opcoes = criarOpcoesUpgrade(conjunto, rng);
-    sessao.hud.cta = { nome: COPY.ctaConfirmar };
+    sessao.hud.hint = COPY.hintMultipla;
+    atualizarCtaMultipla(sessao);
     return;
   }
 
@@ -462,6 +510,7 @@ export function alternarOpcao(sessao, id) {
   if (!opcao || !opcao.ativavel) return;
   opcao.selecionada = !opcao.selecionada;
   opcao.estadoVisual = opcao.selecionada ? 'selecionada' : 'padrao';
+  atualizarCtaMultipla(sessao);
 }
 
 export function confirmarMultipla(sessao) {
@@ -510,6 +559,13 @@ export function confirmarMultipla(sessao) {
     return;
   }
 
+  if (revelacaoCompleta(sessao.hud.opcoes)) {
+    sessao.hud.feedback = 'acerto';
+    sessao.hud.feedbackTexto = COPY.revelado;
+    sessao.hud.cta = { nome: COPY.ctaContinuar, desabilitado: false };
+    return;
+  }
+
   pintarErro(sessao);
-  sessao.hud.cta = { nome: COPY.ctaConfirmar };
+  atualizarCtaMultipla(sessao);
 }

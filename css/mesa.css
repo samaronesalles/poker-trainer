@@ -1,4 +1,4 @@
-/* Mesa de clube: feltro profundo, rail, holofote. Viewport de refer?ncia 1280?720. */
+/* Mesa de clube: feltro profundo, rail, holofote. Tr?s composi??es, n?o um oval el?stico. */
 
 :root {
   --feltro: #0b3a28;
@@ -14,7 +14,11 @@
   --ficha-navy: #1c2a44;
   --texto: #f3ead6;
   --street-ms: 2000ms;
-  --hud-h: 168px;
+  --mesa-max-w: 1400px;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
 }
 
 *,
@@ -26,10 +30,11 @@
 html,
 body {
   margin: 0;
-  height: 100%;
+  min-height: 100%;
   background: var(--sala);
   color: var(--texto);
   font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  overflow: auto;
 }
 
 ::selection {
@@ -39,13 +44,43 @@ body {
 
 body {
   min-height: 100dvh;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 20;
+  padding: 0.45rem 0.8rem;
+  background: #1a1208;
+  color: #f3ead6;
+  border-radius: 8px;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: none;
 }
 
 .clube {
-  height: 100dvh;
+  min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
+  padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
   background:
     radial-gradient(ellipse 80% 55% at 50% 28%, #14161c 0%, transparent 55%),
     radial-gradient(ellipse 120% 80% at 50% 120%, #000 0%, transparent 50%),
@@ -72,12 +107,13 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  padding: 0.6rem 1rem 0;
+  padding: 0.55rem 1rem 0;
 }
 
 .rail {
-  width: min(1180px, 96vw);
-  height: min(560px, calc(100dvh - var(--hud-h) - 1.2rem));
+  width: min(94vw, var(--mesa-max-w));
+  height: min(100%, 72dvh);
+  max-height: 100%;
   border-radius: 50% / 46%;
   background:
     repeating-linear-gradient(
@@ -91,8 +127,9 @@ body {
     0 28px 50px rgba(0, 0, 0, 0.55),
     inset 0 2px 0 rgba(196, 165, 116, 0.35),
     inset 0 -8px 18px rgba(0, 0, 0, 0.45);
-  padding: 22px 28px;
+  padding: 18px 24px;
   position: relative;
+  overflow: visible;
 }
 
 .rail::before,
@@ -152,9 +189,9 @@ body {
 .holofote {
   position: absolute;
   left: 50%;
-  top: 42%;
-  width: 340px;
-  height: 200px;
+  top: 48%;
+  width: min(42%, 360px);
+  height: min(46%, 210px);
   transform: translate(-50%, -50%);
   background: radial-gradient(ellipse, rgba(255, 236, 190, 0.18), transparent 68%);
   pointer-events: none;
@@ -163,9 +200,9 @@ body {
 .sapato {
   position: absolute;
   left: 50%;
-  top: 18%;
-  width: 46px;
-  height: 64px;
+  top: 8%;
+  width: 42px;
+  height: 58px;
   transform: translateX(-50%);
   border-radius: 6px;
   background: repeating-linear-gradient(
@@ -174,17 +211,32 @@ body {
     #24345a 6px 12px
   );
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-  opacity: 0.55;
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.arco-adversarios {
+  position: absolute;
+  z-index: 4;
+  left: 7%;
+  right: 7%;
+  top: 4%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
   pointer-events: none;
 }
 
 .assento {
-  position: absolute;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  z-index: 2;
+  gap: 0.4rem;
+  z-index: 4;
+  pointer-events: auto;
 }
 
 .assento[data-seat='adversarioA'],
@@ -192,29 +244,30 @@ body {
   flex-direction: column-reverse;
 }
 
-.assento[data-seat='adversarioA'] {
-  left: 16%;
-  top: 10%;
-}
-
-.assento[data-seat='adversarioB'] {
-  right: 16%;
-  top: 10%;
-}
-
-.assento[data-seat='voce'] {
+.assento--heroi {
+  position: absolute;
   left: 50%;
-  bottom: 6%;
+  bottom: 2%;
   transform: translateX(-50%);
-  z-index: 3;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  z-index: 5;
 }
 
-.assento[data-seat='voce'] .hole-slot {
-  width: 76px;
-  height: 106px;
+.assento--heroi .ident {
+  position: absolute;
+  left: calc(100% + 0.45rem);
+  bottom: 0;
+  white-space: nowrap;
 }
 
-.assento[data-seat='voce'] .avatar {
+.assento--heroi .hole-slot {
+  width: clamp(64px, 6.8vw, 92px);
+  height: clamp(90px, 9.5vw, 128px);
+}
+
+.assento--heroi .avatar {
   width: 64px;
   height: 64px;
 }
@@ -228,7 +281,13 @@ body {
   box-shadow: 0 0 0 2px #e8d6a0, 0 0 16px rgba(232, 214, 160, 0.55);
 }
 
-.assento[data-seat='voce'] .apelido {
+.assento[data-foco='true'] .holes {
+  border-radius: 10px;
+  box-shadow: 0 0 0 2px rgba(232, 214, 160, 0.55), 0 0 18px rgba(232, 214, 160, 0.28);
+  padding: 0.15rem;
+}
+
+.assento--heroi .apelido {
   font-size: 1.05rem;
 }
 
@@ -238,8 +297,8 @@ body {
 }
 
 .hole-slot {
-  width: 58px;
-  height: 82px;
+  width: clamp(48px, 4.8vw, 62px);
+  height: clamp(68px, 6.8vw, 86px);
   border-radius: 6px;
   border: 1px dashed rgba(232, 214, 160, 0.22);
   background: rgba(0, 0, 0, 0.12);
@@ -250,10 +309,6 @@ body {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-}
-
-.assento[data-seat='voce'] .ident {
-  flex-direction: row;
 }
 
 .avatar {
@@ -268,6 +323,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
 }
 
 .stack {
@@ -304,7 +360,7 @@ body {
 .board {
   position: absolute;
   left: 50%;
-  top: 46%;
+  top: 52%;
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
@@ -313,8 +369,8 @@ body {
 }
 
 .slot {
-  width: 70px;
-  height: 98px;
+  width: clamp(52px, 5.5vw, 76px);
+  height: clamp(74px, 7.7vw, 106px);
   border-radius: 7px;
   border: 1px solid rgba(232, 214, 160, 0.2);
   background: rgba(0, 20, 12, 0.22);
@@ -324,19 +380,21 @@ body {
 
 .burn-area {
   position: absolute;
-  left: 50%;
-  top: 46%;
-  width: 70px;
-  height: 98px;
-  transform: translate(-50%, -50%) translateX(-280px) rotate(-18deg);
+  left: 16%;
+  top: 52%;
+  width: clamp(52px, 5.5vw, 70px);
+  height: clamp(74px, 7.7vw, 98px);
+  transform: translate(-50%, -50%) rotate(-18deg);
   pointer-events: none;
-  z-index: 4;
+  z-index: 3;
 }
 
 .pote {
+  --pote-dx: 0px;
+  --pote-dy: 0px;
   position: absolute;
   left: 50%;
-  top: 31%;
+  top: 24%;
   transform: translateX(-50%);
   display: flex;
   gap: 0.35rem;
@@ -344,37 +402,25 @@ body {
   z-index: 2;
 }
 
-.pote[data-modo='para_vencedor'][data-para='voce'] {
-  transform: translateX(-50%) translateY(210px);
-}
-
-.pote[data-modo='para_vencedor'][data-para='adversarioA'] {
-  transform: translateX(-50%) translate(-220px, -70px);
-}
-
-.pote[data-modo='para_vencedor'][data-para='adversarioB'] {
-  transform: translateX(-50%) translate(220px, -70px);
+.pote[data-modo='para_vencedor'] {
+  transform: translate(calc(-50% + var(--pote-dx)), var(--pote-dy));
 }
 
 .pote[data-modo='split'] {
-  transform: translateX(-50%) translateY(-8px);
+  transform: translateX(-50%);
 }
 
 .pote-grupo {
+  --split-x: 0px;
+  --split-y: 0px;
   display: flex;
   transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.pote[data-modo='split'] .pote-grupo[data-para='voce'] {
-  transform: translate(-90px, 200px);
-}
-
-.pote[data-modo='split'] .pote-grupo[data-para='adversarioA'] {
-  transform: translate(-160px, -70px);
-}
-
+.pote[data-modo='split'] .pote-grupo[data-para='voce'],
+.pote[data-modo='split'] .pote-grupo[data-para='adversarioA'],
 .pote[data-modo='split'] .pote-grupo[data-para='adversarioB'] {
-  transform: translate(160px, -70px);
+  transform: translate(var(--split-x), var(--split-y));
 }
 
 .pote-chip {
@@ -406,59 +452,217 @@ body {
   --street-ms: 1000ms;
 }
 
-@media (max-width: 900px) {
+@media (min-width: 1600px) {
   :root {
-    --hud-h: auto;
+    --mesa-max-w: 1600px;
   }
+}
 
-  body {
-    overflow: auto;
+@media (min-width: 2200px) {
+  :root {
+    --mesa-max-w: 1840px;
   }
+}
 
-  .clube {
-    height: auto;
-    min-height: 100dvh;
+@media (min-width: 901px) and (min-height: 860px) {
+  .rail {
+    height: min(100%, 78dvh);
   }
+}
 
+/* Retrato: tablet e telefone alto ? mesa usa a altura extra; assentos no rail. */
+@media (max-width: 900px) {
   .palco {
-    padding: 0.4rem;
+    padding: 0.35rem 0.45rem 0;
   }
 
   .rail {
-    width: 100%;
-    height: 420px;
-    border-radius: 42% / 38%;
-    padding: 14px;
+    width: min(96vw, var(--mesa-max-w));
+    height: min(100%, 58dvh);
+    border-radius: 36% / 32%;
+    padding: 12px 14px;
   }
 
   .feltro,
   .feltro::before {
-    border-radius: 42% / 38%;
+    border-radius: 36% / 32%;
   }
 
-  .assento[data-seat='adversarioA'] {
-    left: 4%;
-    top: 6%;
+  .arco-adversarios {
+    left: 3%;
+    right: 3%;
+    top: 2%;
+    gap: 0.75rem;
   }
 
-  .assento[data-seat='adversarioB'] {
-    right: 4%;
-    top: 6%;
+  .avatar {
+    width: 40px;
+    height: 40px;
   }
 
-  .slot,
-  .hole-slot {
+  .assento--heroi .avatar {
     width: 48px;
-    height: 68px;
+    height: 48px;
   }
 
-  .assento[data-seat='voce'] .hole-slot {
-    width: 56px;
-    height: 78px;
+  .assento--heroi {
+    gap: 0.45rem;
+    bottom: 1.5%;
+  }
+
+  .board {
+    top: 54%;
+  }
+
+  .pote {
+    top: 22%;
+  }
+
+  .sapato {
+    top: 6%;
+    width: 34px;
+    height: 46px;
   }
 
   .burn-area {
-    transform: translate(-50%, -50%) translateX(-160px) rotate(-18deg);
+    display: none;
+  }
+}
+
+/* Estreito: A | B numa fileira compacta, nomes inteiros. */
+@media (max-width: 480px) {
+  .rail {
+    width: 100%;
+    height: min(100%, 46dvh);
+    border-radius: 28px;
+    padding: 10px;
+  }
+
+  .feltro,
+  .feltro::before {
+    border-radius: 22px;
+  }
+
+  .arco-adversarios {
+    left: 1.5%;
+    right: 1.5%;
+    top: 1.5%;
+    gap: 0.45rem;
+  }
+
+  .apelido {
+    font-size: 0.78rem;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .assento--heroi {
+    bottom: 1%;
+  }
+
+  .assento--heroi .avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .assento--heroi .apelido {
+    font-size: 0.9rem;
+  }
+
+  .hole-slot {
+    width: 40px;
+    height: 56px;
+  }
+
+  .assento--heroi .hole-slot {
+    width: 50px;
+    height: 70px;
+  }
+
+  .slot {
+    width: 42px;
+    height: 60px;
+  }
+
+  .board {
+    gap: 0.28rem;
+    top: 56%;
+  }
+
+  .pote {
+    top: 20%;
+  }
+
+  .sapato {
+    display: none;
+  }
+}
+
+/* Paisagem baixa: mesa ? esquerda, HUD ? direita ? tudo na primeira tela. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .clube {
+    flex-direction: row;
+    align-items: stretch;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .palco {
+    flex: 1 1 58%;
+    padding: 0.35rem 0.4rem;
+  }
+
+  .rail {
+    width: 100%;
+    height: min(94dvh, 100%);
+    border-radius: 28% / 40%;
+    padding: 10px 14px;
+  }
+
+  .feltro,
+  .feltro::before {
+    border-radius: 28% / 40%;
+  }
+
+  .arco-adversarios {
+    left: 4%;
+    right: 4%;
+    top: 3%;
+  }
+
+  .assento--heroi {
+    bottom: 2%;
+  }
+
+  .hole-slot {
+    width: 40px;
+    height: 56px;
+  }
+
+  .assento--heroi .hole-slot {
+    width: 50px;
+    height: 70px;
+  }
+
+  .slot {
+    width: 42px;
+    height: 58px;
+  }
+
+  .pote {
+    top: 20%;
+  }
+
+  .board {
+    top: 52%;
+  }
+
+  .burn-area,
+  .sapato {
+    display: none;
   }
 }
 

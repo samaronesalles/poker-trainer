@@ -1,10 +1,12 @@
-/* HUD barra de a√ß√£o ‚Äî fundo escuro transl√∫cido, alvos grandes, :focus-visible. */
+/* HUD barra de aùùo ù largura da mesa, alvos grandes, :focus-visible. */
 
 .hud {
-  flex: 0 0 auto;
-  min-height: 148px;
-  margin: 0.55rem 1rem 0.7rem;
-  padding: 0.85rem 1.1rem 1rem;
+  --mesa-max-w: 1400px;
+  flex: 0 1 auto;
+  width: min(94vw, var(--mesa-max-w));
+  max-width: var(--mesa-max-w);
+  margin: 0.5rem auto max(0.55rem, env(safe-area-inset-bottom, 0px));
+  padding: 0.75rem 1.1rem 0.85rem;
   border-radius: 14px 14px 8px 8px;
   background: linear-gradient(180deg, rgba(16, 18, 24, 0.92), rgba(8, 9, 12, 0.96));
   border: 1px solid rgba(196, 165, 116, 0.22);
@@ -19,20 +21,84 @@
   outline: none;
 }
 
+.hud[data-hud-estado='ociosa'],
+.hud[data-hud-estado='resultado'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem 1.2rem;
+}
+
+.hud[data-hud-estado='ociosa'] .hud__linha,
+.hud[data-hud-estado='resultado'] .hud__resultado {
+  margin: 0;
+  flex: 1 1 16rem;
+}
+
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem 0.85rem;
+  align-items: end;
+}
+
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__street,
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__linha,
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__hint,
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__feedback,
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__opcoes {
+  grid-column: 1;
+}
+
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__acoes {
+  grid-column: 2;
+  grid-row: 4 / span 3;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.hud__street {
+  display: flex;
+  gap: 0.55rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8d7a52;
+}
+
+.hud__street [data-street] {
+  opacity: 0.45;
+}
+
+.hud__street [aria-current='step'] {
+  opacity: 1;
+  color: #e8d6a0;
+  font-weight: 800;
+}
+
 .hud__linha {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.65rem;
   font-size: 1.05rem;
   letter-spacing: 0.01em;
 }
 
+.hud__hint {
+  margin: -0.3rem 0 0.5rem;
+  font-size: 0.88rem;
+  color: #d4c7a4;
+}
+
 .hud__feedback {
-  min-height: 1.25rem;
-  margin: 0 0 0.55rem;
+  min-height: 1.15rem;
+  margin: 0 0 0.5rem;
   font-size: 0.95rem;
   font-weight: 700;
 }
 
-.hud__feedback[data-kind='acerto'] {
+.hud__feedback[data-kind='acerto'],
+.hud__feedback[data-kind='revelado'] {
   color: #b7e0c2;
 }
 
@@ -61,10 +127,6 @@
   flex-wrap: wrap;
   gap: 0.45rem 1.15rem;
   font-size: 0.95rem;
-}
-
-.hud__resultado-cats span {
-  opacity: 1;
 }
 
 .hud__acoes {
@@ -127,6 +189,10 @@
   color: #1a1208;
 }
 
+.btn--secundario {
+  min-width: 7rem;
+}
+
 .btn--opcao {
   display: flex;
   align-items: center;
@@ -134,8 +200,16 @@
   gap: 0.4rem;
 }
 
+.hud[data-modo='multipla'] .btn--opcao {
+  border-radius: 999px;
+}
+
 .btn__rotulo {
   pointer-events: none;
+}
+
+.btn__rotulo--curto {
+  display: none;
 }
 
 .btn__marca {
@@ -184,18 +258,153 @@
   box-shadow: 0 0 0 1px #c07070, 0 -8px 30px rgba(0, 0, 0, 0.35);
 }
 
+@media (min-width: 1600px) {
+  .hud {
+    --mesa-max-w: 1600px;
+  }
+}
+
+@media (min-width: 2200px) {
+  .hud {
+    --mesa-max-w: 1840px;
+  }
+}
+
 @media (max-width: 900px) {
   .hud {
-    margin: 0.4rem 0.5rem 0.6rem;
-    min-height: 0;
+    width: min(96vw, var(--mesa-max-w));
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+    padding: 0.65rem 0.75rem 0.75rem;
+  }
+
+  .hud[data-hud-estado='perguntando'][data-modo='multipla'] {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .hud__opcoes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .hud__opcoes--pote {
+    grid-template-columns: 1fr;
+  }
+
+  .hud__opcoes--pote .btn__rotulo--longo {
+    display: none;
+  }
+
+  .hud__opcoes--pote .btn__rotulo--curto {
+    display: inline;
+  }
+
   .btn--cta {
     width: 100%;
+  }
+
+  .hud[data-hud-estado='ociosa'] .btn--cta,
+  .hud[data-hud-estado='resultado'] .btn--cta {
+    width: auto;
+    min-width: 10rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hud {
+    width: calc(100% - 0.7rem);
+    margin-left: 0.35rem;
+    margin-right: 0.35rem;
+    max-height: 52dvh;
+    overflow-y: auto;
+  }
+
+  .hud__linha {
+    font-size: 0.98rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 0.4rem 0.75rem;
+  }
+
+  .hud[data-modo='multipla'] .hud__acoes {
+    flex-direction: row;
+    position: sticky;
+    bottom: 0;
+    padding-top: 0.25rem;
+    background: linear-gradient(180deg, rgba(8, 9, 12, 0), rgba(8, 9, 12, 0.96) 30%);
+  }
+
+  .hud[data-modo='multipla'] .btn--cta,
+  .hud[data-modo='multipla'] .btn--secundario {
+    width: auto;
+    flex: 1 1 0;
+  }
+
+  .hud[data-hud-estado='ociosa'],
+  .hud[data-hud-estado='resultado'] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hud[data-hud-estado='ociosa'] .btn--cta,
+  .hud[data-hud-estado='resultado'] .btn--cta {
+    width: 100%;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .hud {
+    flex: 1 1 42%;
+    width: auto;
+    max-width: 44vw;
+    height: auto;
+    max-height: 100dvh;
+    margin: 0.35rem 0.45rem 0.35rem 0;
+    overflow-y: auto;
+    border-radius: 10px;
+    padding: 0.5rem 0.65rem 0.55rem;
+  }
+
+  .hud[data-hud-estado='perguntando'][data-modo='multipla'] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hud__opcoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hud__opcoes--pote {
+    grid-template-columns: 1fr;
+  }
+
+  .hud__opcoes--pote .btn__rotulo--longo {
+    display: none;
+  }
+
+  .hud__opcoes--pote .btn__rotulo--curto {
+    display: inline;
+  }
+
+  .hud[data-modo='multipla'] .hud__acoes {
+    flex-direction: row;
+    position: sticky;
+    bottom: 0;
+  }
+
+  .hud[data-modo='multipla'] .btn--cta,
+  .hud[data-modo='multipla'] .btn--secundario {
+    width: auto;
+    flex: 1 1 0;
+  }
+
+  .btn {
+    min-height: 36px;
+    padding: 0.3rem 0.6rem;
   }
 }
 

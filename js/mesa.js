@@ -1,5 +1,5 @@
 /**
- * Sessão da mesa + FSM do HUD (exportável sem DOM).
+ * Sess�o da mesa + FSM do HUD (export�vel sem DOM).
  * Consome js/baralho.js (RN-044), js/quiz.js e js/storage.js.
  * MUST NOT chamar localStorage direto. MUST NOT importar js/motor.js.
  */
@@ -13,6 +13,13 @@ import {
 } from './baralho.js';
 import { aplicarVisibilidade, criarBurnCenico, criarElementoCarta } from './carta.js';
 import {
+  assentoEmFoco,
+  chavesCartasVencedoras,
+  composicaoDoViewport,
+  offsetPote,
+  streetVisivel,
+} from './layout.js';
+import {
   APELIDOS,
   COPY,
   PASSOS,
@@ -24,11 +31,12 @@ import {
   decidirPosMaoAtual,
   modoDoPasso,
   prepararShowdown,
+  revelacaoCompleta,
   rotuloVencedor,
 } from './quiz.js';
 import { criarStorage } from './storage.js';
 
-export const LINHA_ERRO_MONTAGEM = 'Não foi possível embaralhar. Tente de novo.';
+export const LINHA_ERRO_MONTAGEM = 'N\u00e3o foi poss\u00edvel embaralhar. Tente de novo.';
 export const BEAT_ACERTO_MS = 400;
 export const TETO_SHOWDOWN_EXTRA_MS = 1000;
 
@@ -61,6 +69,8 @@ function hudOciosa() {
     enunciado: null,
     linhaProposito: COPY.linhaProposito,
     linhaErro: null,
+    hint: null,
+    street: null,
     opcoes: [],
     cta: { nome: COPY.ctaNovaMao },
     feedback: null,
@@ -139,6 +149,8 @@ function entrarDeal(sessao) {
   sessao.hud.enunciado = null;
   sessao.hud.linhaProposito = null;
   sessao.hud.linhaErro = null;
+  sessao.hud.hint = null;
+  sessao.hud.street = streetVisivel(sessao.mao?.street);
   sessao.hud.opcoes = [];
   sessao.hud.cta = null;
   sessao.hud.feedback = null;
@@ -249,6 +261,8 @@ function abrirSkip(sessao, passo) {
   sessao.mao.passo = passo;
   sessao.hud.estado = 'sem_upgrade';
   sessao.hud.enunciado = null;
+  sessao.hud.hint = null;
+  sessao.hud.street = streetVisivel(sessao.mao?.street);
   sessao.hud.opcoes = [];
   sessao.hud.cta = { nome: COPY.ctaContinuar };
   sessao.hud.feedback = 'acerto';
@@ -260,6 +274,8 @@ function abrirResultado(sessao) {
   const split = vencedores.length >= 2;
   sessao.hud.estado = 'resultado';
   sessao.hud.enunciado = null;
+  sessao.hud.hint = null;
+  sessao.hud.street = streetVisivel('river');
   sessao.hud.opcoes = [];
   sessao.hud.cta = { nome: COPY.ctaProximaMao };
   sessao.hud.feedback = 'acerto';
@@ -286,7 +302,7 @@ function abrirStreetSeguinte(sessao, street) {
   entrarDeal(sessao);
 }
 
-// Cadência 005: após a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
+// Cad�ncia 005: ap�s a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
 function decidirAposMaoAtual(sessao, passoUpgrade, passoSkip) {
   const decisao = decidirPosMaoAtual(sessao);
   if (decisao === 'pergunta') {
@@ -387,7 +403,16 @@ function escolherOpcao(sessao, id) {
 }
 
 function continuar(sessao) {
-  if (sessao.hud.estado !== 'sem_upgrade' || !sessao.mao) return;
+  if (!sessao.mao) return;
+  if (
+    sessao.hud.estado === 'perguntando' &&
+    modoDoPasso(sessao.mao.passo) === 'multipla' &&
+    revelacaoCompleta(sessao.hud.opcoes)
+  ) {
+    avancarAcerto(sessao);
+    return;
+  }
+  if (sessao.hud.estado !== 'sem_upgrade') return;
   if (sessao.mao.passo === PASSOS.flop_skip) {
     abrirStreetSeguinte(sessao, 'turn');
     return;
@@ -585,6 +610,87 @@ async function mostrarBurn(ms) {
   host.replaceChildren();
 }
 
+function resetarOffsetPote(pote) {
+  pote.style.setProperty('--pote-dx', '0px');
+  pote.style.setProperty('--pote-dy', '0px');
+  for (const grupo of pote.querySelectorAll('.pote-grupo')) {
+    grupo.style.setProperty('--split-x', '0px');
+    grupo.style.setProperty('--split-y', '0px');
+  }
+}
+
+function aplicarOffsetPote() {
+  const pote = $('[data-pote]');
+  const boundsEl = $('#mesa');
+  if (!pote || !boundsEl) return;
+  resetarOffsetPote(pote);
+  const modo = sessao.pote.modo;
+  const vencedores = sessao.pote.vencedoresVisuais ?? [];
+  const bounds = boundsEl.getBoundingClientRect();
+
+  if (modo === 'para_vencedor' && vencedores[0]) {
+    const assento = document.querySelector(`[data-seat="${vencedores[0]}"]`);
+    if (!assento) return;
+    const { dx, dy } = offsetPote({
+      origem: pote.getBoundingClientRect(),
+      destino: assento.getBoundingClientRect(),
+      bounds,
+    });
+    pote.style.setProperty('--pote-dx', `${dx}px`);
+    pote.style.setProperty('--pote-dy', `${dy}px`);
+    return;
+  }
+
+  if (modo === 'split') {
+    for (const id of vencedores) {
+      const grupo = pote.querySelector(`.pote-grupo[data-para="${id}"]`);
+      const assento = document.querySelector(`[data-seat="${id}"]`);
+      if (!grupo || !assento || grupo.hidden) continue;
+      const { dx, dy } = offsetPote({
+        origem: grupo.getBoundingClientRect(),
+        destino: assento.getBoundingClientRect(),
+        bounds,
+      });
+      grupo.style.setProperty('--split-x', `${dx}px`);
+      grupo.style.setProperty('--split-y', `${dy}px`);
+    }
+  }
+}
+
+function destacarCartasVencedoras() {
+  for (const el of $all('.carta')) {
+    delete el.dataset.vencedora;
+  }
+  if (sessao.hud.estado !== 'resultado') return;
+  const chaves = new Set(
+    chavesCartasVencedoras(sessao.mao?.showdown, sessao.pote.vencedoresVisuais),
+  );
+  for (const el of $all('.carta')) {
+    const chave = `${el.dataset.rank}-${el.dataset.suit}`;
+    if (chaves.has(chave)) el.dataset.vencedora = 'true';
+  }
+}
+
+function atualizarFocoAssento() {
+  const foco = assentoEmFoco(sessao.mao?.passo);
+  for (const el of $all('.assento')) {
+    if (foco && el.dataset.seat === foco && sessao.hud.estado === 'perguntando') {
+      el.dataset.foco = 'true';
+    } else {
+      delete el.dataset.foco;
+    }
+  }
+}
+
+function aplicarComposicao() {
+  const clube = $('#clube');
+  if (!clube) return;
+  clube.dataset.composicao = composicaoDoViewport({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+}
+
 function atualizarPote() {
   const pote = $('[data-pote]');
   if (!pote) return;
@@ -623,6 +729,10 @@ function atualizarPote() {
       delete el.dataset.vencedor;
     }
   }
+
+  aplicarOffsetPote();
+  destacarCartasVencedoras();
+  atualizarFocoAssento();
 }
 
 function textoFeedback() {
@@ -631,10 +741,33 @@ function textoFeedback() {
   return '';
 }
 
+function marcadorStreet(street) {
+  const nav = document.createElement('p');
+  nav.className = 'hud__street';
+  nav.setAttribute('aria-label', 'Street da mao');
+  const nomes = [
+    ['flop', 'Flop'],
+    ['turn', 'Turn'],
+    ['river', 'River'],
+  ];
+  for (const [id, rotulo] of nomes) {
+    const passo = document.createElement('span');
+    passo.dataset.street = id;
+    passo.textContent = rotulo;
+    if (id === street) passo.setAttribute('aria-current', 'step');
+    nav.append(passo);
+  }
+  return nav;
+}
+
 function renderHud() {
   const hud = $('#hud');
   if (!hud) return;
   hud.dataset.hudEstado = sessao.hud.estado;
+  hud.dataset.modo = sessao.mao?.modo ?? '';
+  const street = sessao.hud.street ?? streetVisivel(sessao.mao?.street);
+  if (street) hud.dataset.street = street;
+  else hud.removeAttribute('data-street');
   hud.replaceChildren();
 
   const linha = document.createElement('p');
@@ -642,9 +775,13 @@ function renderHud() {
 
   const feedback = document.createElement('p');
   feedback.className = 'hud__feedback';
-  const fb = textoFeedback();
+  const fb =
+    sessao.hud.estado === 'perguntando' && sessao.hud.feedbackTexto === COPY.revelado
+      ? COPY.revelado
+      : textoFeedback();
   if (fb && sessao.hud.estado === 'perguntando') {
-    feedback.dataset.kind = sessao.hud.feedback;
+    feedback.dataset.kind = sessao.hud.feedback === 'erro' ? 'erro' : 'acerto';
+    if (sessao.hud.feedbackTexto === COPY.revelado) feedback.dataset.kind = 'revelado';
     feedback.textContent = fb;
   }
 
@@ -655,23 +792,37 @@ function renderHud() {
   }
 
   if (sessao.hud.estado === 'deal') {
+    if (street) hud.append(marcadorStreet(street));
     linha.textContent = '';
     hud.append(linha);
     return;
   }
 
   if (sessao.hud.estado === 'perguntando') {
+    if (street) hud.append(marcadorStreet(street));
     linha.textContent = sessao.hud.enunciado ?? '';
-    hud.append(linha, feedback, gradeOpcoes());
+    hud.append(linha);
+    if (sessao.hud.hint) {
+      const hint = document.createElement('p');
+      hint.className = 'hud__hint';
+      hint.textContent = sessao.hud.hint;
+      hud.append(hint);
+    }
+    hud.append(feedback, gradeOpcoes());
     const confirmar =
       sessao.hud.cta?.nome === COPY.ctaConfirmar &&
       sessao.mao?.faseTentativa !== 'aguardando_beat';
-    if (confirmar) hud.append(acoesCta(COPY.ctaConfirmar));
+    if (confirmar) hud.append(acoesMultipla());
+    if (sessao.hud.cta?.nome === COPY.ctaContinuar) {
+      hud.append(acoesCta(COPY.ctaContinuar));
+    }
     focarPrimeiroHabilitado(hud);
+    atualizarFocoAssento();
     return;
   }
 
   if (sessao.hud.estado === 'sem_upgrade') {
+    if (street) hud.append(marcadorStreet(street));
     linha.textContent = COPY.semUpgrade;
     hud.append(linha, acoesCta(COPY.ctaContinuar));
     focarPrimeiroHabilitado(hud);
@@ -679,6 +830,7 @@ function renderHud() {
   }
 
   if (sessao.hud.estado === 'resultado') {
+    if (street) hud.append(marcadorStreet(street));
     const bloco = document.createElement('div');
     bloco.className = 'hud__resultado';
     const venceu = document.createElement('p');
@@ -705,22 +857,44 @@ function renderHud() {
   }
 }
 
+function botaoCta(nome, { primario = true, desabilitado = false } = {}) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = primario ? 'btn btn--cta' : 'btn btn--secundario';
+  btn.dataset.cta = nome;
+  btn.textContent = nome;
+  btn.disabled = desabilitado;
+  btn.addEventListener('click', () => onCta(nome));
+  return btn;
+}
+
 function acoesCta(nome) {
   const wrap = document.createElement('div');
   wrap.className = 'hud__acoes';
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn--cta';
-  btn.dataset.cta = nome;
-  btn.textContent = nome;
-  btn.addEventListener('click', () => onCta(nome));
-  wrap.append(btn);
+  wrap.append(botaoCta(nome));
+  return wrap;
+}
+
+function acoesMultipla() {
+  const wrap = document.createElement('div');
+  wrap.className = 'hud__acoes';
+  if (sessao.hud.cta?.desabilitado) {
+    wrap.append(botaoCta(COPY.ctaNenhuma, { primario: false }));
+  }
+  wrap.append(
+    botaoCta(COPY.ctaConfirmar, {
+      desabilitado: sessao.hud.cta?.desabilitado === true,
+    }),
+  );
   return wrap;
 }
 
 function gradeOpcoes() {
   const wrap = document.createElement('div');
   wrap.className = 'hud__opcoes';
+  if (sessao.mao?.passo === PASSOS.river_vencedor) {
+    wrap.classList.add('hud__opcoes--pote');
+  }
   const multipla = modoDoPasso(sessao.mao?.passo) === 'multipla';
   for (const opcao of sessao.hud.opcoes) {
     const btn = document.createElement('button');
@@ -731,9 +905,15 @@ function gradeOpcoes() {
     btn.disabled = !opcao.ativavel;
     btn.tabIndex = opcao.ativavel ? 0 : -1;
     const rotulo = document.createElement('span');
-    rotulo.className = 'btn__rotulo';
+    rotulo.className = 'btn__rotulo btn__rotulo--longo';
     rotulo.textContent = opcao.rotulo;
     btn.append(rotulo);
+    if (opcao.rotuloCurto && opcao.rotuloCurto !== opcao.rotulo) {
+      const curto = document.createElement('span');
+      curto.className = 'btn__rotulo btn__rotulo--curto';
+      curto.textContent = opcao.rotuloCurto;
+      btn.append(curto);
+    }
     if (opcao.marca === 'acerto' || opcao.marca === 'corte') {
       const marca = document.createElement('span');
       marca.className = 'btn__marca';
@@ -1012,8 +1192,23 @@ function onCta(nome) {
     void iniciarMao({ proxima: true });
     return;
   }
+  if (nome === COPY.ctaNenhuma) {
+    if (sessao.mao?.faseTentativa === 'aguardando_beat') return;
+    aplicar(sessao, EVENTOS.CONFIRMAR);
+    if (sessao.hud.feedback === 'erro') {
+      playAudio('erro');
+      flashHud('erro');
+    } else if (sessao.hud.feedback === 'acerto') {
+      playAudio('acerto');
+      flashHud('acerto');
+    }
+    renderHud();
+    if (sessao.mao?.faseTentativa === 'aguardando_beat') agendarFimBeatAcerto();
+    return;
+  }
   if (nome === COPY.ctaConfirmar) {
     if (sessao.mao?.faseTentativa === 'aguardando_beat') return;
+    if (sessao.hud.cta?.desabilitado) return;
     aplicar(sessao, EVENTOS.CONFIRMAR);
     if (sessao.hud.feedback === 'erro') {
       playAudio('erro');
@@ -1030,8 +1225,13 @@ function onCta(nome) {
     const passo = sessao.mao?.passo;
     aplicar(sessao, EVENTOS.CONTINUAR);
     renderHud();
-    if (passo === PASSOS.flop_skip) void ritualTurnOuRiver('turn', 4);
-    if (passo === PASSOS.turn_skip) void ritualTurnOuRiver('river', 5);
+    atualizarPote();
+    if (passo === PASSOS.flop_skip || passo === PASSOS.flop_upgrade) {
+      void ritualTurnOuRiver('turn', 4);
+    }
+    if (passo === PASSOS.turn_skip || passo === PASSOS.turn_upgrade) {
+      void ritualTurnOuRiver('river', 5);
+    }
   }
 }
 
@@ -1071,6 +1271,11 @@ export function bootMesa() {
   sessao.movimentoReduzido = reduzirMovimento();
   window.addEventListener('pointermove', onPointerMove, { passive: true });
   clube.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('resize', () => {
+    aplicarComposicao();
+    aplicarOffsetPote();
+  });
+  aplicarComposicao();
   renderHud();
   atualizarPote();
 }
