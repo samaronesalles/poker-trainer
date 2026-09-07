@@ -61,7 +61,15 @@ node --test tests/contract/*.test.js
 
 ## Deploy
 
-Publicação prevista via **GitHub Pages** a partir da branch `main`. Detalhes em [ADR-001](docs/adr/ADR-001-entrega-estatica-github-pages.md).
+Site público no GitHub Pages: **https://samaronesalles.github.io/poker-trainer/**
+
+O workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) publica só `index.html`, `css/`, `js/` e `assets/` (sem testes nem docs). Dispara ao:
+
+- subir uma tag `v*` (`git tag v1.0.0 && git push origin v1.0.0`);
+- publicar um **Release** no GitHub;
+- rodar **Actions → Deploy GitHub Pages → Run workflow** (manual).
+
+A fonte do Pages no repositório deve ser **GitHub Actions** (Settings → Pages → Build and deployment → Source). Detalhes da escolha de hospedagem em [ADR-001](docs/adr/ADR-001-entrega-estatica-github-pages.md). A evolução no `localStorage` é por origem: o treino em `localhost` e o do Pages não compartilham contadores.
 
 ## Privacidade
 
