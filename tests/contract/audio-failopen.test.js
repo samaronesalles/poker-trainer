@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as audio from '../../js/audio.js';
 
-test('não exporta mute, unmute, volume ou setVolume', () => {
+test('nÃ£o exporta mute, unmute, volume ou setVolume', () => {
   assert.equal(audio.mute, undefined);
   assert.equal(audio.unmute, undefined);
   assert.equal(audio.volume, undefined);
@@ -11,7 +11,7 @@ test('não exporta mute, unmute, volume ou setVolume', () => {
   assert.equal(typeof audio.play, 'function');
 });
 
-test('unlock e play nunca lançam sem AudioContext', async () => {
+test('unlock e play nunca lanÃ§am sem AudioContext', async () => {
   await assert.doesNotReject(() => audio.unlock());
   assert.doesNotThrow(() => audio.play('shuffle'));
   assert.doesNotThrow(() => audio.play('deal'));
@@ -22,7 +22,7 @@ test('unlock e play nunca lançam sem AudioContext', async () => {
   assert.doesNotThrow(() => audio.play('evento-desconhecido'));
 });
 
-test('AudioContext inexistente ou rejeitado não lança', async () => {
+test('AudioContext inexistente ou rejeitado nÃ£o lanÃ§a', async () => {
   const original = globalThis.AudioContext;
   const originalWebkit = globalThis.webkitAudioContext;
   try {
@@ -41,7 +41,7 @@ test('AudioContext inexistente ou rejeitado não lança', async () => {
   }
 });
 
-test('resume rejeitado não lança', async () => {
+test('resume rejeitado nÃ£o lanÃ§a', async () => {
   const original = globalThis.AudioContext;
   try {
     globalThis.AudioContext = class {

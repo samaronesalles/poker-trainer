@@ -1,5 +1,5 @@
 /**
- * Sessùo da mesa + FSM do HUD (exportùvel sem DOM).
+ * Sess√£o da mesa + FSM do HUD (export√°vel sem DOM).
  * Consome js/baralho.js (RN-044), js/quiz.js e js/storage.js.
  * MUST NOT chamar localStorage direto. MUST NOT importar js/motor.js.
  */
@@ -28,7 +28,7 @@ import {
 } from './quiz.js';
 import { criarStorage } from './storage.js';
 
-export const LINHA_ERRO_MONTAGEM = 'Nùo foi possùvel embaralhar. Tente de novo.';
+export const LINHA_ERRO_MONTAGEM = 'N√£o foi poss√≠vel embaralhar. Tente de novo.';
 export const BEAT_ACERTO_MS = 400;
 export const TETO_SHOWDOWN_EXTRA_MS = 1000;
 
@@ -286,7 +286,7 @@ function abrirStreetSeguinte(sessao, street) {
   entrarDeal(sessao);
 }
 
-// Cadùncia 005: apùs a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
+// Cad√™ncia 005: ap√≥s a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
 function decidirAposMaoAtual(sessao, passoUpgrade, passoSkip) {
   const decisao = decidirPosMaoAtual(sessao);
   if (decisao === 'pergunta') {

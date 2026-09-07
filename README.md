@@ -2,7 +2,7 @@
 
 Treinador de **leitura de mãos** de Texas Hold'em no navegador. Simula uma mesa online com três jogadores para você praticar identificar categorias de mão, upgrades possíveis e o vencedor do pote — com feedback imediato e estatísticas locais de evolução.
 
-> **Status:** documentação e arquitetura definidas; implementação em andamento via [Spec Kit roadmap](docs/speckit-roadmap.md).
+> **Status:** MVP implementado (features 001–006 do [Spec Kit roadmap](docs/speckit-roadmap.md)).
 
 ## Por que existe
 

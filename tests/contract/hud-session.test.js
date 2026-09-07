@@ -175,7 +175,7 @@ function ate(sessao, alvo, payload = payloadMontagem()) {
   acertarUnica(sessao, sessao.mao.corretaUnica);
 }
 
-test('1. estado inicial ociosa, CTA Nova mo, 0 opes e linha de propsito', () => {
+test('1. estado inicial ociosa, CTA Nova mÃ£o, 0 opÃ§Ãµes e linha de propÃ³sito', () => {
   const sessao = criarSessao();
   assert.equal(sessao.hud.estado, 'ociosa');
   assert.equal(sessao.hud.cta?.nome, COPY.ctaNovaMao);
@@ -188,7 +188,7 @@ test('1. estado inicial ociosa, CTA Nova mo, 0 opes e linha de propsito', ()
   assert.ok(sessao.misturaVisita);
 });
 
-test('2. INICIAR_MAO com montagem RN-044 ? deal com 0 opes', () => {
+test('2. INICIAR_MAO com montagem RN-044 ? deal com 0 opÃ§Ãµes', () => {
   const sessao = criarSessao();
   aplicar(sessao, EVENTOS.INICIAR_MAO, payloadMontagem());
   assert.equal(sessao.hud.estado, 'deal');
@@ -200,7 +200,7 @@ test('2. INICIAR_MAO com montagem RN-044 ? deal com 0 opes', () => {
   assert.equal(sessao.mao.permutacao.length, 52);
 });
 
-test('INICIAR_MAO sem payload vlido permanece ociosa e mao null', () => {
+test('INICIAR_MAO sem payload vÃ¡lido permanece ociosa e mao null', () => {
   const sessao = criarSessao();
   aplicar(sessao, EVENTOS.INICIAR_MAO);
   assert.equal(sessao.hud.estado, 'ociosa');
@@ -211,7 +211,7 @@ test('INICIAR_MAO sem payload vlido permanece ociosa e mao null', () => {
   assert.equal(sessao.mao, null);
 });
 
-test('3. board vazio aps hole pousadas permanece fora de perguntando', () => {
+test('3. board vazio apÃ³s hole pousadas permanece fora de perguntando', () => {
   const sessao = criarSessao();
   ate(sessao, 'holes');
   assert.notEqual(sessao.hud.estado, 'perguntando');
@@ -224,7 +224,7 @@ test('3. board vazio aps hole pousadas permanece fora de perguntando', () => {
   assert.equal(a.hole[0].visibilidade, 'verso');
 });
 
-test('aps holes, mapeamento RN-044 A=[0][1] B=[2][3] Voc=[4][5]', () => {
+test('apÃ³s holes, mapeamento RN-044 A=[0][1] B=[2][3] VocÃª=[4][5]', () => {
   const sessao = criarSessao();
   const payload = payloadFabrica();
   ate(sessao, 'holes', payload);
@@ -243,7 +243,7 @@ test('aps holes, mapeamento RN-044 A=[0][1] B=[2][3] Voc=[4][5]', () => {
   assert.notEqual(sessao.hud.estado, 'perguntando');
 });
 
-test('4. flop pousado ? perguntando flop_hero, 6 opes, correta = Melhor5', () => {
+test('4. flop pousado ? perguntando flop_hero, 6 opÃ§Ãµes, correta = Melhor5', () => {
   const sessao = criarSessao();
   ate(sessao, 'flop_hero');
   assert.equal(sessao.hud.estado, 'perguntando');
@@ -256,7 +256,7 @@ test('4. flop pousado ? perguntando flop_hero, 6 opes, correta = Melhor5', () 
   assert.equal(sessao.hud.cta, null);
 });
 
-test('payloadFabrica no flop do heri  Straight flush, no Flush', () => {
+test('payloadFabrica no flop do herÃ³i â€” Straight flush, nÃ£o Flush', () => {
   const sessao = criarSessao();
   ate(sessao, 'flop_hero', payloadFabrica());
   const corretas = sessao.hud.opcoes.filter((o) => o.correta);
@@ -265,7 +265,7 @@ test('payloadFabrica no flop do heri  Straight flush, no Flush', () => {
   assert.equal(corretas[0].rotulo, 'Straight flush');
 });
 
-test('5. escolha errada permanece flop_hero, opo eliminada e mostra erro', () => {
+test('5. escolha errada permanece flop_hero, opÃ§Ã£o eliminada e mostra erro', () => {
   const sessao = criarSessao();
   ate(sessao, 'flop_hero');
   const chute = sessao.hud.opcoes.find((item) => item.verdadeira === false);
@@ -281,7 +281,7 @@ test('5. escolha errada permanece flop_hero, opo eliminada e mostra erro', () 
   assert.notEqual(opcao(sessao, sessao.mao.corretaUnica).estadoVisual, 'acertada');
 });
 
-test('escolha da correta permanece perguntando at FIM_BEAT_ACERTO', () => {
+test('escolha da correta permanece perguntando atÃ© FIM_BEAT_ACERTO', () => {
   const sessao = criarSessao();
   ate(sessao, 'flop_hero');
   const id = sessao.mao.corretaUnica;
@@ -315,7 +315,7 @@ test('ALTERNAR_OPCAO em flop_upgrade permanece perguntando com feedback null', (
   assert.equal(sessao.hud.feedback, null);
 });
 
-test('7. conjunto correto + beat ? deal turn, no skip', () => {
+test('7. conjunto correto + beat ? deal turn, nÃ£o skip', () => {
   const sessao = criarSessao();
   ate(sessao, 'turn_deal', payloadParFlop());
   assert.equal(sessao.hud.estado, 'deal');
@@ -436,7 +436,7 @@ test('13. segunda mao nao vira split so porque indiceMaoSessao >= 2', () => {
   assert.deepEqual(sessao.pote.vencedoresVisuais, ['adversarioA']);
 });
 
-test('14. FALHA_DEAL ? ociosa + Nova mo', () => {
+test('14. FALHA_DEAL ? ociosa + Nova mÃ£o', () => {
   const sessao = criarSessao();
   aplicar(sessao, EVENTOS.INICIAR_MAO, payloadMontagem());
   aplicar(sessao, EVENTOS.FALHA_DEAL);
@@ -447,7 +447,7 @@ test('14. FALHA_DEAL ? ociosa + Nova mo', () => {
   assert.equal(sessao.hud.linhaErro, null);
 });
 
-test('clique em opo desabilitada ignora', () => {
+test('clique em opÃ§Ã£o desabilitada ignora', () => {
   const sessao = criarSessao();
   ate(sessao, 'flop_hero');
   const chute = sessao.hud.opcoes.find((item) => item.verdadeira === false);
@@ -457,7 +457,7 @@ test('clique em opo desabilitada ignora', () => {
   assert.equal(sessao.mao.passo, PASSOS.flop_hero);
 });
 
-test('CONTINUAR / streets no substituem cartasJogo nem permutacao', () => {
+test('CONTINUAR / streets nÃ£o substituem cartasJogo nem permutacao', () => {
   const sessao = criarSessao();
   const payload = payloadFabrica();
   ate(sessao, 'flop_hero', payload);
@@ -503,19 +503,19 @@ test('showdown vira A/B com as mesmas identidades do deal', () => {
   assert.deepEqual(dealA, [chave(payload.cartasJogo[0]), chave(payload.cartasJogo[1])]);
 });
 
-test('FALHA_MONTAGEM permanece ociosa com copy cannica e Nova mo', () => {
+test('FALHA_MONTAGEM permanece ociosa com copy canÃ´nica e Nova mÃ£o', () => {
   const sessao = criarSessao();
   aplicar(sessao, EVENTOS.FALHA_MONTAGEM);
   assert.equal(sessao.hud.estado, 'ociosa');
   assert.equal(sessao.mao, null);
   assert.equal(sessao.hud.linhaErro, LINHA_ERRO_MONTAGEM);
-  assert.equal(LINHA_ERRO_MONTAGEM, 'No foi possvel embaralhar. Tente de novo.');
+  assert.equal(LINHA_ERRO_MONTAGEM, 'NÃ£o foi possÃ­vel embaralhar. Tente de novo.');
   assert.equal(sessao.hud.cta?.nome, COPY.ctaNovaMao);
   assert.equal(sessao.hud.opcoes.length, 0);
   assert.notEqual(sessao.hud.estado, 'deal');
 });
 
-test('segunda inteno com montagemEmCurso no incrementa indiceMaoSessao', () => {
+test('segunda intenÃ§Ã£o com montagemEmCurso nÃ£o incrementa indiceMaoSessao', () => {
   const sessao = criarSessao();
   sessao.montagemEmCurso = true;
   aplicar(sessao, EVENTOS.INICIAR_MAO, payloadMontagem());
@@ -548,7 +548,7 @@ test('0 Confirmar em flop_hero e river_hero', () => {
   assert.equal(river.hud.cta, null);
 });
 
-test('reload aps 1 tentativa preserva contadores e HUD volta ociosa', () => {
+test('reload apÃ³s 1Âª tentativa preserva contadores e HUD volta ociosa', () => {
   const { api } = memoria();
   const storage = criarStorage({ api });
   const sessao = criarSessao({ storage });
@@ -561,7 +561,7 @@ test('reload aps 1 tentativa preserva contadores e HUD volta ociosa', () => {
   assert.equal(deNovo.evolucao.mao_atual.straight_flush.acertos, 1);
 });
 
-test('sesso no tem CTA zerar nem campos de relatrio; CTAs permitidos', () => {
+test('sessÃ£o nÃ£o tem CTA zerar nem campos de relatÃ³rio; CTAs permitidos', () => {
   const sessao = criarSessao();
   const permitidos = new Set([COPY.ctaNovaMao, COPY.ctaProximaMao, COPY.ctaContinuar, COPY.ctaConfirmar]);
   assert.equal('zerar' in sessao, false);
@@ -579,7 +579,7 @@ test('sesso no tem CTA zerar nem campos de relatrio; CTAs permitidos', () => 
   assert.equal(fim.hud.cta.nome, COPY.ctaProximaMao);
 });
 
-test('beat 400 ms padro e 0 se movimento reduzido', () => {
+test('beat 400 ms padrÃ£o e 0 se movimento reduzido', () => {
   assert.equal(duracaoBeatMs(false), 400);
   assert.equal(duracaoBeatMs(true), 0);
 });
@@ -614,7 +614,7 @@ test('T022: flop e turn da mesma mao sao duas 1as tentativas; turn_skip nao grav
   assert.equal(JSON.stringify(sessao.evolucao.upgrade), upgradeAntes);
 });
 
-test('FIM_BEAT_ACERTO em flop_hero no abre o turn', () => {
+test('FIM_BEAT_ACERTO em flop_hero nÃ£o abre o turn', () => {
   const sessao = criarSessao();
   ate(sessao, 'flop_upgrade', payloadParFlop());
   assert.notEqual(sessao.mao.street, 'turn');
@@ -622,7 +622,7 @@ test('FIM_BEAT_ACERTO em flop_hero no abre o turn', () => {
   assert.ok(sessao.mao.passo === PASSOS.flop_upgrade || sessao.mao.passo === PASSOS.flop_skip);
 });
 
-test('duplicata nas visveis no pouso ? ociosa + copy de enumerao', () => {
+test('duplicata nas visÃ­veis no pouso ? ociosa + copy de enumeraÃ§Ã£o', () => {
   const sessao = criarSessao();
   aplicar(sessao, EVENTOS.INICIAR_MAO, payloadParFlop());
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'holes' });
@@ -635,7 +635,7 @@ test('duplicata nas visveis no pouso ? ociosa + copy de enumerao', () => {
   assert.notEqual(sessao.hud.estado, 'sem_upgrade');
 });
 
-test('flop e turn no-skip: duas 1s Confirmar em upgrade; 0 toque em mao_atual nesta pergunta', () => {
+test('flop e turn nÃ£o-skip: duas 1Âªs Confirmar em upgrade; 0 toque em mao_atual nesta pergunta', () => {
   const { api } = memoria();
   const sessao = criarSessao({ storage: criarStorage({ api }) });
   ate(sessao, 'flop_upgrade', payloadParFlop());
@@ -656,7 +656,7 @@ const raizHud = dirname(fileURLToPath(import.meta.url));
 const fonteMesa = readFileSync(join(raizHud, '../../js/mesa.js'), 'utf8');
 const fonteIndex = readFileSync(join(raizHud, '../../index.html'), 'utf8');
 
-test('split heroi vs A: modo split, texto empate, Prxima mo', () => {
+test('split heroi vs A: modo split, texto empate, PrÃ³xima mÃ£o', () => {
   const sessao = criarSessao();
   ate(sessao, 'resultado', payloadEmpateVoceA());
   assert.equal(sessao.hud.estado, 'resultado');
@@ -675,7 +675,7 @@ test('tres: tres assentos destacados; 0 classe de escurecer perdedor', () => {
   assert.ok(fonteIndex.includes("data-para=\"adversarioB\"") || fonteIndex.includes("data-para='adversarioB'"));
 });
 
-test('showdown.ok false apos virada -> ociosa + Nova mo; 0 perguntando', () => {
+test('showdown.ok false apos virada -> ociosa + Nova mÃ£o; 0 perguntando', () => {
   const sessao = criarSessao();
   ate(sessao, 'river', payloadHeroiParAFlush());
   sessao.mao.cartasJogo[10] = { ...sessao.mao.cartasJogo[0] };
@@ -696,7 +696,7 @@ test('pendente apos virada permanece deal', () => {
   assert.equal(sessao.mao.viradaShowdownConcluida, true);
 });
 
-test('Proxima mo com pote split devolve centro e novo deal', () => {
+test('Proxima mÃ£o com pote split devolve centro e novo deal', () => {
   const sessao = criarSessao();
   ate(sessao, 'resultado', payloadEmpateVoceA());
   assert.equal(sessao.pote.modo, 'split');
@@ -717,7 +717,7 @@ test('acerto river_hero vai a river_a; 0 upgrade no river', () => {
   assert.equal(fonteMesa.includes('river_upgrade'), false);
 });
 
-test('reload no showdown aborta a mo e preserva contadores; blob s 3 buckets', () => {
+test('reload no showdown aborta a mÃ£o e preserva contadores; blob sÃ³ 3 buckets', () => {
   const { map, api } = memoria();
   const storage = criarStorage({ api });
   const sessao = criarSessao({ storage });
@@ -745,7 +745,7 @@ test('fail-open de storage deixa as quatro perguntas e o resultado seguirem', ()
   assert.equal(sessao.hud.cta?.nome, COPY.ctaProximaMao);
 });
 
-test('mesa.js no importa motor.js nem chama localStorage; foca primeiro habilitado', () => {
+test('mesa.js nÃ£o importa motor.js nem chama localStorage; foca primeiro habilitado', () => {
   assert.equal(fonteMesa.includes("from './motor.js'"), false);
   assert.equal(/localStorage\s*[.([]/.test(fonteMesa), false);
   assert.ok(fonteMesa.includes('focarPrimeiroHabilitado'));
@@ -753,7 +753,7 @@ test('mesa.js no importa motor.js nem chama localStorage; foca primeiro habilit
   assert.equal(/Embaralhar/.test(fonteMesa), false);
 });
 
-test('categoriasIdentificadas s no resultado; 0 rtulo nas cartas', () => {
+test('categoriasIdentificadas sÃ³ no resultado; 0 rÃ³tulo nas cartas', () => {
   const sessao = criarSessao();
   ate(sessao, 'river_vencedor', payloadHeroiParAFlush());
   assert.equal(sessao.hud.categoriasIdentificadas.voce, null);
