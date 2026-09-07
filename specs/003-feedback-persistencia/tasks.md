@@ -44,9 +44,9 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Encaixar os módulos de domínio `quiz` e `storage` no site estático já entregue pelas 001–002, sem backend e sem bundler
 
-- [ ] T001 Create DOM-free ES module skeleton `js/quiz.js` absorbing current exports from `js/quiz-stub.js` (`COPY`, `APELIDOS`, `PASSOS`, `CATEGORIAS_STUB`, `VENCEDORES_STUB`, `shuffleOpcoes`, `criarOpcoesCategoria`, `criarOpcoesVencedor`, `enunciadoDoPasso`, `idVencedorCorreto`, `rotuloVencedorCorreto`); add `PASSOS.flop_upgrade`; drop `PASSOS.flop_skip` from the new enum (callers still on stub until T009); MUST NOT import `js/baralho.js`; MUST NOT create `js/motor.js`
-- [ ] T002 [P] Create DOM-free ES module skeleton `js/storage.js` exporting `CHAVE_EVOLUCAO = 'poker-trainer:evolucao'` and `criarStorage({ api } = {})` with injectable `{ getItem, setItem, removeItem }` (or `indisponivel: true`); MUST NOT import `document`, `alert`, `indexedDB`, `sessionStorage`, `js/quiz.js`, or `js/mesa.js`; MUST NOT export `clear()` / `zerar()` for the UI
-- [ ] T003 Confirm `package.json` stays `"type": "module"` with zero runtime dependencies and no bundler/lint/Playwright scripts; MUST NOT add `js/motor.js`
+- [X] T001 Create DOM-free ES module skeleton `js/quiz.js` absorbing current exports from `js/quiz-stub.js` (`COPY`, `APELIDOS`, `PASSOS`, `CATEGORIAS_STUB`, `VENCEDORES_STUB`, `shuffleOpcoes`, `criarOpcoesCategoria`, `criarOpcoesVencedor`, `enunciadoDoPasso`, `idVencedorCorreto`, `rotuloVencedorCorreto`); add `PASSOS.flop_upgrade`; drop `PASSOS.flop_skip` from the new enum (callers still on stub until T009); MUST NOT import `js/baralho.js`; MUST NOT create `js/motor.js`
+- [X] T002 [P] Create DOM-free ES module skeleton `js/storage.js` exporting `CHAVE_EVOLUCAO = 'poker-trainer:evolucao'` and `criarStorage({ api } = {})` with injectable `{ getItem, setItem, removeItem }` (or `indisponivel: true`); MUST NOT import `document`, `alert`, `indexedDB`, `sessionStorage`, `js/quiz.js`, or `js/mesa.js`; MUST NOT export `clear()` / `zerar()` for the UI
+- [X] T003 Confirm `package.json` stays `"type": "module"` with zero runtime dependencies and no bundler/lint/Playwright scripts; MUST NOT add `js/motor.js`
 
 ---
 
@@ -56,13 +56,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **⚠️ CRITICAL**: Nenhuma user story pode começar até esta fase estar completa
 
-- [ ] T004 [P] Implement `CATEGORIA_IDS` (the 10 RN-014 ids) and `evolucaoZerada()` returning `mao_atual` + `upgrade` (all 10 keys at `{ acertos:0, erros:0, exposicoes:0 }`) plus `vencedor_pote` group in `js/storage.js` per `specs/003-feedback-persistencia/contracts/storage.md` §2 and `specs/003-feedback-persistencia/data-model.md`
-- [ ] T005 Implement `ler()`, `gravar(evolucao)`, and `aplicarDeltas(deltas)` in `js/storage.js`: JSON on `poker-trainer:evolucao`; lazy write (absent key MUST NOT `setItem`); never throw; success `gravar` → `true`, failure → `false`; one read-mutate-write blob per `aplicarDeltas` (depends on T004)
-- [ ] T006 Update stub content in `js/quiz.js`: six visible categories remain Par / Carta alta / Dois pares / Trinca / Flush / Straight; hero (`flop_hero`/`turn_hero`/`river_hero`) correct id `flush`; `river_a`/`river_b` correct id `par`; `conjuntoCorreto` of upgrades `['flush']` with Par as distractor; add `COPY.ctaConfirmar = 'Confirmar'` and `COPY.enunciadoUpgrades = 'Quais mãos você ainda não tem, mas ainda pode formar?'`; keep winner RN-030 texts (depends on T001)
-- [ ] T007 [P] Extend option/CTA styles in `css/hud.css`: replace `data-estado='correto'`/`errado_desabilitado` with `acertada`/`eliminada`/`selecionada`; visible ✕ mark on eliminated and ✓ mark on acertada (not color-only); reduced emphasis on dead options; keep existing `.btn--cta` for **Confirmar**
-- [ ] T008 Extend in-memory session in `js/mesa.js`: add `EVENTOS.ALTERNAR_OPCAO`, `CONFIRMAR`, `FIM_BEAT_ACERTO`; add `mao.faseTentativa` (`aguardando_primeira` \| `primeira_registrada` \| `aguardando_beat`); add `sessao.evolucao` cache; keep exactly five HUD states; update the file header to allow `quiz`/`storage` modules but MUST NOT call `localStorage` from `js/mesa.js` and MUST NOT create `js/motor.js`
-- [ ] T009 Switch imports in `js/mesa.js` and `tests/contract/hud-session.test.js` from `js/quiz-stub.js` to `js/quiz.js`; keep `APELIDOS` **Você** / **Adversário A** / **Adversário B**; existing 002 montagem/`FALHA_MONTAGEM` cases MUST still compile (depends on T001, T006, T008)
-- [ ] T010 Delete `js/quiz-stub.js` after zero remaining imports (grep the repo); MUST NOT leave the stub in parallel with `js/quiz.js` (depends on T009)
+- [X] T004 [P] Implement `CATEGORIA_IDS` (the 10 RN-014 ids) and `evolucaoZerada()` returning `mao_atual` + `upgrade` (all 10 keys at `{ acertos:0, erros:0, exposicoes:0 }`) plus `vencedor_pote` group in `js/storage.js` per `specs/003-feedback-persistencia/contracts/storage.md` §2 and `specs/003-feedback-persistencia/data-model.md`
+- [X] T005 Implement `ler()`, `gravar(evolucao)`, and `aplicarDeltas(deltas)` in `js/storage.js`: JSON on `poker-trainer:evolucao`; lazy write (absent key MUST NOT `setItem`); never throw; success `gravar` → `true`, failure → `false`; one read-mutate-write blob per `aplicarDeltas` (depends on T004)
+- [X] T006 Update stub content in `js/quiz.js`: six visible categories remain Par / Carta alta / Dois pares / Trinca / Flush / Straight; hero (`flop_hero`/`turn_hero`/`river_hero`) correct id `flush`; `river_a`/`river_b` correct id `par`; `conjuntoCorreto` of upgrades `['flush']` with Par as distractor; add `COPY.ctaConfirmar = 'Confirmar'` and `COPY.enunciadoUpgrades = 'Quais mãos você ainda não tem, mas ainda pode formar?'`; keep winner RN-030 texts (depends on T001)
+- [X] T007 [P] Extend option/CTA styles in `css/hud.css`: replace `data-estado='correto'`/`errado_desabilitado` with `acertada`/`eliminada`/`selecionada`; visible ✕ mark on eliminated and ✓ mark on acertada (not color-only); reduced emphasis on dead options; keep existing `.btn--cta` for **Confirmar**
+- [X] T008 Extend in-memory session in `js/mesa.js`: add `EVENTOS.ALTERNAR_OPCAO`, `CONFIRMAR`, `FIM_BEAT_ACERTO`; add `mao.faseTentativa` (`aguardando_primeira` \| `primeira_registrada` \| `aguardando_beat`); add `sessao.evolucao` cache; keep exactly five HUD states; update the file header to allow `quiz`/`storage` modules but MUST NOT call `localStorage` from `js/mesa.js` and MUST NOT create `js/motor.js`
+- [X] T009 Switch imports in `js/mesa.js` and `tests/contract/hud-session.test.js` from `js/quiz-stub.js` to `js/quiz.js`; keep `APELIDOS` **Você** / **Adversário A** / **Adversário B**; existing 002 montagem/`FALHA_MONTAGEM` cases MUST still compile (depends on T001, T006, T008)
+- [X] T010 Delete `js/quiz-stub.js` after zero remaining imports (grep the repo); MUST NOT leave the stub in parallel with `js/quiz.js` (depends on T009)
 
 **Checkpoint**: Foundation ready — user story implementation can now begin
 
@@ -78,17 +78,17 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Write contract tests in `tests/contract/quiz.test.js` for seleção única per `specs/003-feedback-persistencia/contracts/quiz.md` §9.1–9.3: 0 CTA **Confirmar** on `unica`; click on distractor submits; click on `flush` submits; error copy exactly `Não é essa. Tente de novo.`; dead option keeps the same visual index with marca `corte`; remaining order frozen; correct option not marked certa until chosen; zero `alert`
-- [ ] T012 [P] [US1] Update helper `ate()` and FSM tests in `tests/contract/hud-session.test.js`: hero correct is `flush` (not `par`); wrong choice stays `flop_hero` with option `eliminada`; correct `flush` stays `perguntando` with feedback acerto until `FIM_BEAT_ACERTO`; 0 **Confirmar** on `flop_hero`/`river_*`; `resultado` reiterates Você=Flush, A=Par, B=Par (`specs/003-feedback-persistencia/contracts/hud-cadencia.md` §6.2–6.3, §5)
+- [X] T011 [P] [US1] Write contract tests in `tests/contract/quiz.test.js` for seleção única per `specs/003-feedback-persistencia/contracts/quiz.md` §9.1–9.3: 0 CTA **Confirmar** on `unica`; click on distractor submits; click on `flush` submits; error copy exactly `Não é essa. Tente de novo.`; dead option keeps the same visual index with marca `corte`; remaining order frozen; correct option not marked certa until chosen; zero `alert`
+- [X] T012 [P] [US1] Update helper `ate()` and FSM tests in `tests/contract/hud-session.test.js`: hero correct is `flush` (not `par`); wrong choice stays `flop_hero` with option `eliminada`; correct `flush` stays `perguntando` with feedback acerto until `FIM_BEAT_ACERTO`; 0 **Confirmar** on `flop_hero`/`river_*`; `resultado` reiterates Você=Flush, A=Par, B=Par (`specs/003-feedback-persistencia/contracts/hud-cadencia.md` §6.2–6.3, §5)
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement seleção única submit-on-click in `js/quiz.js` + `js/mesa.js` `aplicar()`/`escolherOpcao`: `ESCOLHER_OPCAO` on ativável submits; MUST NOT render **Confirmar** when `modo === 'unica'`; click on feltro / missing id does nothing (FR-001, RN-047)
-- [ ] T014 [US1] Implement error path in `js/quiz.js` and paint it in `js/mesa.js` `gradeOpcoes()` / `renderHud()`: exact error copy in `.hud__feedback`; option `estadoVisual = 'eliminada'`, `marca = 'corte'`, `ativavel = false`; same place in the grid; Tab/`tabIndex` skips dead; re-click/Enter/Space ignored; MUST NOT name the correct category (RN-035, RN-036, FR-004, FR-005)
-- [ ] T015 [US1] Implement success path in `js/quiz.js`: exact copy `Você acertou`; option `acertada` + marca `acerto` only after chosen; `faseTentativa → aguardando_beat`; grade remains visible; ignore `ESCOLHER_OPCAO` during beat; MUST NOT call `avancarAcerto` until `FIM_BEAT_ACERTO`; MUST NOT show **Continuar** on acerto (FR-003)
-- [ ] T016 [US1] Schedule `FIM_BEAT_ACERTO` in the browser adapter of `js/mesa.js` (400 ms default, 0 ms when `sessao.movimentoReduzido` / `prefers-reduced-motion: reduce`); FSM in `js/quiz.js` MUST NOT use `setTimeout`; Node tests fire the event immediately (research.md §7)
-- [ ] T017 [US1] Point stub grading and `abrirResultado()` in `js/quiz.js` / `js/mesa.js` at hero Flush and A/B Par; keep vencedor RN-030 (`voce` mão 1, `voce_a` mão 2+); MUST NOT use `alert`/`confirm`/`prompt`; existing SFX `playAudio('acerto'|'erro')` stay (FR-021, FR-023)
-- [ ] T018 [US1] Render marcas and disabled/Tab behavior in `js/mesa.js` `gradeOpcoes()` plus `css/hud.css` (depends on T007): visible ✕/✓ besides HUD text; `data-estado` matches `acertada`/`eliminada`; dead buttons `disabled` and out of tab order (CA-025, FR-024)
+- [X] T013 [US1] Implement seleção única submit-on-click in `js/quiz.js` + `js/mesa.js` `aplicar()`/`escolherOpcao`: `ESCOLHER_OPCAO` on ativável submits; MUST NOT render **Confirmar** when `modo === 'unica'`; click on feltro / missing id does nothing (FR-001, RN-047)
+- [X] T014 [US1] Implement error path in `js/quiz.js` and paint it in `js/mesa.js` `gradeOpcoes()` / `renderHud()`: exact error copy in `.hud__feedback`; option `estadoVisual = 'eliminada'`, `marca = 'corte'`, `ativavel = false`; same place in the grid; Tab/`tabIndex` skips dead; re-click/Enter/Space ignored; MUST NOT name the correct category (RN-035, RN-036, FR-004, FR-005)
+- [X] T015 [US1] Implement success path in `js/quiz.js`: exact copy `Você acertou`; option `acertada` + marca `acerto` only after chosen; `faseTentativa → aguardando_beat`; grade remains visible; ignore `ESCOLHER_OPCAO` during beat; MUST NOT call `avancarAcerto` until `FIM_BEAT_ACERTO`; MUST NOT show **Continuar** on acerto (FR-003)
+- [X] T016 [US1] Schedule `FIM_BEAT_ACERTO` in the browser adapter of `js/mesa.js` (400 ms default, 0 ms when `sessao.movimentoReduzido` / `prefers-reduced-motion: reduce`); FSM in `js/quiz.js` MUST NOT use `setTimeout`; Node tests fire the event immediately (research.md §7)
+- [X] T017 [US1] Point stub grading and `abrirResultado()` in `js/quiz.js` / `js/mesa.js` at hero Flush and A/B Par; keep vencedor RN-030 (`voce` mão 1, `voce_a` mão 2+); MUST NOT use `alert`/`confirm`/`prompt`; existing SFX `playAudio('acerto'|'erro')` stay (FR-021, FR-023)
+- [X] T018 [US1] Render marcas and disabled/Tab behavior in `js/mesa.js` `gradeOpcoes()` plus `css/hud.css` (depends on T007): visible ✕/✓ besides HUD text; `data-estado` matches `acertada`/`eliminada`; dead buttons `disabled` and out of tab order (CA-025, FR-024)
 
 **Checkpoint**: User Story 1 fully functional and independently testable (clique-submete + feedback canônico + opção morta + beat)
 
@@ -102,16 +102,16 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Extend `tests/contract/quiz.test.js` for múltipla seleção per `specs/003-feedback-persistencia/contracts/quiz.md` §9.5–9.10: toggle does not change feedback/counters; only `CONFIRMAR` evaluates; 1st Confirmar Flush+Par → Par eliminada, Flush travado, pergunta não fecha; empty 1st Confirmar → Flush still ativável; 2nd Confirmar does not change counters; conjunto só Flush → acerto + beat; `turn_skip` / **Continuar** leaves `upgrade` unchanged
-- [ ] T020 [P] [US2] Extend `tests/contract/hud-session.test.js` per `specs/003-feedback-persistencia/contracts/hud-cadencia.md` §6.4–6.8, §6.11: `flush` + `FIM_BEAT_ACERTO` → `flop_upgrade` with CTA **Confirmar** and 0 `sem_upgrade`; `ALTERNAR_OPCAO` stays `perguntando` with feedback null; `CONFIRMAR` with only `flush` + beat → `deal` turn (not skip); `turn_hero` + `flush` + beat → `sem_upgrade` + **Continuar**; 0 **Confirmar** on `flop_hero` / `river_*`; helper `ate()` no longer uses `flop_skip`
+- [X] T019 [P] [US2] Extend `tests/contract/quiz.test.js` for múltipla seleção per `specs/003-feedback-persistencia/contracts/quiz.md` §9.5–9.10: toggle does not change feedback/counters; only `CONFIRMAR` evaluates; 1st Confirmar Flush+Par → Par eliminada, Flush travado, pergunta não fecha; empty 1st Confirmar → Flush still ativável; 2nd Confirmar does not change counters; conjunto só Flush → acerto + beat; `turn_skip` / **Continuar** leaves `upgrade` unchanged
+- [X] T020 [P] [US2] Extend `tests/contract/hud-session.test.js` per `specs/003-feedback-persistencia/contracts/hud-cadencia.md` §6.4–6.8, §6.11: `flush` + `FIM_BEAT_ACERTO` → `flop_upgrade` with CTA **Confirmar** and 0 `sem_upgrade`; `ALTERNAR_OPCAO` stays `perguntando` with feedback null; `CONFIRMAR` with only `flush` + beat → `deal` turn (not skip); `turn_hero` + `flush` + beat → `sem_upgrade` + **Continuar**; 0 **Confirmar** on `flop_hero` / `river_*`; helper `ate()` no longer uses `flop_skip`
 
 ### Implementation for User Story 2
 
-- [ ] T021 [P] [US2] Add `criarOpcoesUpgrade()` and `enunciadoDoPasso(PASSOS.flop_upgrade)` in `js/quiz.js`: exactly the same 6 category faces; `conjuntoCorreto = ['flush']`; Par and the other four are distractors; enunciado exactly the §5.4 copy (FR-020)
-- [ ] T022 [US2] Implement `ALTERNAR_OPCAO` in `js/quiz.js` and `js/mesa.js` `aplicar()`/`onOpcao`: toggle `selecionada` / `aria-pressed` on ativável options in `multipla`; MUST NOT evaluate or write storage; `ESCOLHER_OPCAO` in `multipla` MUST toggle or be unused (mesa emits `ALTERNAR_OPCAO` only) (FR-002, RN-047)
-- [ ] T023 [US2] Implement `CONFIRMAR` UI rules in `js/quiz.js` per quiz.md §4: 1st confirm applies RN-024 (true marked → lock ✓; true omitted → stay ativável; distractor marked → eliminada ✕; distractor unmarked → stay ativável); later confirms only fix the displayed set (RN-025); ignore un-toggle of locked and re-activate of dead; perfect displayed set → `Você acertou` + beat (FR-011)
-- [ ] T024 [US2] Change cadence in `js/mesa.js` `avancarAcerto()` / `continuar()` / `onCta()`: `flop_hero` beat → `perguntando` `flop_upgrade` (not `abrirSkip`); `flop_upgrade` beat → deal turn (burn cênico + slot 4) without **Continuar**; remove `flop_skip` from PASSOS usage; `turn_hero` beat still `turn_skip` + **Continuar** → deal river (FR-020, RN-G002)
-- [ ] T025 [US2] Render **Confirmar** in `js/mesa.js` `renderHud()` for `multipla` outside beat: CTA after the option grid; Tab order ativáveis → **Confirmar**; Enter/Space on **Confirmar** evaluates; `aria-pressed` on selected chips; ignore Confirmar during `aguardando_beat` (FR-024, hud-cadencia.md §4)
+- [X] T021 [P] [US2] Add `criarOpcoesUpgrade()` and `enunciadoDoPasso(PASSOS.flop_upgrade)` in `js/quiz.js`: exactly the same 6 category faces; `conjuntoCorreto = ['flush']`; Par and the other four are distractors; enunciado exactly the §5.4 copy (FR-020)
+- [X] T022 [US2] Implement `ALTERNAR_OPCAO` in `js/quiz.js` and `js/mesa.js` `aplicar()`/`onOpcao`: toggle `selecionada` / `aria-pressed` on ativável options in `multipla`; MUST NOT evaluate or write storage; `ESCOLHER_OPCAO` in `multipla` MUST toggle or be unused (mesa emits `ALTERNAR_OPCAO` only) (FR-002, RN-047)
+- [X] T023 [US2] Implement `CONFIRMAR` UI rules in `js/quiz.js` per quiz.md §4: 1st confirm applies RN-024 (true marked → lock ✓; true omitted → stay ativável; distractor marked → eliminada ✕; distractor unmarked → stay ativável); later confirms only fix the displayed set (RN-025); ignore un-toggle of locked and re-activate of dead; perfect displayed set → `Você acertou` + beat (FR-011)
+- [X] T024 [US2] Change cadence in `js/mesa.js` `avancarAcerto()` / `continuar()` / `onCta()`: `flop_hero` beat → `perguntando` `flop_upgrade` (not `abrirSkip`); `flop_upgrade` beat → deal turn (burn cênico + slot 4) without **Continuar**; remove `flop_skip` from PASSOS usage; `turn_hero` beat still `turn_skip` + **Continuar** → deal river (FR-020, RN-G002)
+- [X] T025 [US2] Render **Confirmar** in `js/mesa.js` `renderHud()` for `multipla` outside beat: CTA after the option grid; Tab order ativáveis → **Confirmar**; Enter/Space on **Confirmar** evaluates; `aria-pressed` on selected chips; ignore Confirmar during `aguardando_beat` (FR-024, hud-cadencia.md §4)
 
 **Checkpoint**: User Stories 1 AND 2 independently testable (única no clique + múltipla só no Confirmar + skip do turn)
 
@@ -125,17 +125,17 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 3
 
-- [ ] T026 [P] [US3] Write contract tests in `tests/contract/storage.test.js` per `specs/003-feedback-persistencia/contracts/storage.md` §7.1–7.4: `evolucaoZerada()` has 10+10+1 all zero and `exposicoes === acertos + erros`; absent key `ler()` = zeros and 0 `setItem`; delta acerto Flush `mao_atual` writes all 10 keys with `flush.acertos === 1` and `par` present at 0; second delta on the same cell sums (quiz still owns “one first attempt”)
-- [ ] T027 [P] [US3] Extend `tests/contract/quiz.test.js` per quiz.md §9.3–9.4, §9.6–9.8, §9.10, §9.12–9.13: error then acerto on hero → `mao_atual.flush` +1 erro +0 acerto exposicoes 1 (distractor chute does not increment the distractor); first-try Flush acerto; 1st Confirmar Flush+Par → `upgrade.flush` +1 acerto and `upgrade.par` +1 erro; empty 1st Confirmar → `upgrade.flush` +1 erro and unmarked distractors 0; 2nd Confirmar counters frozen; vencedor 1ª tentativa only `vencedor_pote`; river three independent `mao_atual` exposures (Flush, Par, Par); `turn_skip` does not touch `upgrade`
-- [ ] T028 [P] [US3] Extend `tests/contract/hud-session.test.js`: after 1ª tentativa with fake storage, simulated reload/`criarSessao` + `ler()` keeps counters while HUD is `ociosa`; write happens before `FIM_BEAT_ACERTO` / next passo (hud-cadencia.md §6.10, FR-008, FR-014)
+- [X] T026 [P] [US3] Write contract tests in `tests/contract/storage.test.js` per `specs/003-feedback-persistencia/contracts/storage.md` §7.1–7.4: `evolucaoZerada()` has 10+10+1 all zero and `exposicoes === acertos + erros`; absent key `ler()` = zeros and 0 `setItem`; delta acerto Flush `mao_atual` writes all 10 keys with `flush.acertos === 1` and `par` present at 0; second delta on the same cell sums (quiz still owns “one first attempt”)
+- [X] T027 [P] [US3] Extend `tests/contract/quiz.test.js` per quiz.md §9.3–9.4, §9.6–9.8, §9.10, §9.12–9.13: error then acerto on hero → `mao_atual.flush` +1 erro +0 acerto exposicoes 1 (distractor chute does not increment the distractor); first-try Flush acerto; 1st Confirmar Flush+Par → `upgrade.flush` +1 acerto and `upgrade.par` +1 erro; empty 1st Confirmar → `upgrade.flush` +1 erro and unmarked distractors 0; 2nd Confirmar counters frozen; vencedor 1ª tentativa only `vencedor_pote`; river three independent `mao_atual` exposures (Flush, Par, Par); `turn_skip` does not touch `upgrade`
+- [X] T028 [P] [US3] Extend `tests/contract/hud-session.test.js`: after 1ª tentativa with fake storage, simulated reload/`criarSessao` + `ler()` keeps counters while HUD is `ociosa`; write happens before `FIM_BEAT_ACERTO` / next passo (hud-cadencia.md §6.10, FR-008, FR-014)
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Make `js/quiz.js` the unique writer: when `faseTentativa` leaves `aguardando_primeira`, compute deltas then `storage.aplicarDeltas` (full 10+10+1 blob) **before** painting retry or entering `aguardando_beat`; later attempts MUST NOT write (FR-008, quiz.md §7)
-- [ ] T030 [US3] Implement seleção única deltas in `js/quiz.js`: acerto or erro on the **correct** `CategoriaId` in `mao_atual` (never the guessed distractor); winner question increments only `vencedor_pote` (FR-009, FR-022, RN-032)
-- [ ] T031 [US3] Implement 1st `CONFIRMAR` RN-024 deltas in `js/quiz.js` as a single `ler` + sums + one `gravar` (true marked acerto; true omitted erro; distractor marked erro; distractor unmarked 0); subsequent `CONFIRMAR` MUST NOT call `gravar` (FR-010, FR-011, storage.md §3)
-- [ ] T032 [US3] Inject storage into `criarSessao({ storage })` in `js/mesa.js` (default `criarStorage()`); hydrate `sessao.evolucao` via `ler()` on boot; **Continuar** on `turn_skip` MUST NOT write `upgrade`; `js/mesa.js` MUST NOT call `localStorage` (FR-019)
-- [ ] T033 [US3] Keep reload aborting the hand (`ociosa`, `mao = null`) without wiping `poker-trainer:evolucao` in `js/mesa.js` / `js/storage.js`; lazy write: boot MUST NOT `setItem` zeros (FR-013, FR-014, CA-023)
+- [X] T029 [US3] Make `js/quiz.js` the unique writer: when `faseTentativa` leaves `aguardando_primeira`, compute deltas then `storage.aplicarDeltas` (full 10+10+1 blob) **before** painting retry or entering `aguardando_beat`; later attempts MUST NOT write (FR-008, quiz.md §7)
+- [X] T030 [US3] Implement seleção única deltas in `js/quiz.js`: acerto or erro on the **correct** `CategoriaId` in `mao_atual` (never the guessed distractor); winner question increments only `vencedor_pote` (FR-009, FR-022, RN-032)
+- [X] T031 [US3] Implement 1st `CONFIRMAR` RN-024 deltas in `js/quiz.js` as a single `ler` + sums + one `gravar` (true marked acerto; true omitted erro; distractor marked erro; distractor unmarked 0); subsequent `CONFIRMAR` MUST NOT call `gravar` (FR-010, FR-011, storage.md §3)
+- [X] T032 [US3] Inject storage into `criarSessao({ storage })` in `js/mesa.js` (default `criarStorage()`); hydrate `sessao.evolucao` via `ler()` on boot; **Continuar** on `turn_skip` MUST NOT write `upgrade`; `js/mesa.js` MUST NOT call `localStorage` (FR-019)
+- [X] T033 [US3] Keep reload aborting the hand (`ociosa`, `mao = null`) without wiping `poker-trainer:evolucao` in `js/mesa.js` / `js/storage.js`; lazy write: boot MUST NOT `setItem` zeros (FR-013, FR-014, CA-023)
 
 **Checkpoint**: User Stories 1–3 independently testable (1ª tentativa imediata + JSON só de contadores)
 
@@ -149,12 +149,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 4
 
-- [ ] T034 [P] [US4] Extend `tests/contract/quiz.test.js` per quiz.md §9.11 / §5.5: `shuffleOpcoes` accepts injectable `rng`; 10 independent `apresentar` of the same new question → correct id not at the same index in all; retry after error MUST NOT permute; module MUST NOT import `js/baralho.js`
+- [X] T034 [P] [US4] Extend `tests/contract/quiz.test.js` per quiz.md §9.11 / §5.5: `shuffleOpcoes` accepts injectable `rng`; 10 independent `apresentar` of the same new question → correct id not at the same index in all; retry after error MUST NOT permute; module MUST NOT import `js/baralho.js`
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Implement `shuffleOpcoes(opcoes, rng = Math.random)` called only when presenting a new `PerguntaDaMesa` in `js/quiz.js`; freeze `ordemVisual` after the first error; MUST NOT reshuffle on retry (FR-007, RN-G008)
-- [ ] T036 [US4] Guard isolation in `js/quiz.js` and `js/mesa.js`: option shuffle MUST NOT call `embaralhar` / `montarMao` in `js/baralho.js`; advancing a question MUST NOT replace `mao.permutacao` / `mao.cartasJogo` (continuity of feature 002)
+- [X] T035 [US4] Implement `shuffleOpcoes(opcoes, rng = Math.random)` called only when presenting a new `PerguntaDaMesa` in `js/quiz.js`; freeze `ordemVisual` after the first error; MUST NOT reshuffle on retry (FR-007, RN-G008)
+- [X] T036 [US4] Guard isolation in `js/quiz.js` and `js/mesa.js`: option shuffle MUST NOT call `embaralhar` / `montarMao` in `js/baralho.js`; advancing a question MUST NOT replace `mao.permutacao` / `mao.cartasJogo` (continuity of feature 002)
 
 **Checkpoint**: User Stories 1–4 independently testable (G008 ao apresentar, retry estável)
 
@@ -168,13 +168,13 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 5
 
-- [ ] T037 [P] [US5] Extend `tests/contract/hud-session.test.js` per hud-cadencia.md §6.12: session model has 0 zerar CTA and 0 relatório fields; allowed CTA names only `Nova mão` / `Próxima mão` / `Continuar` / `Confirmar`; `resultado` reiterates already-acertadas categories, not counters (CA-024, FR-016)
+- [X] T037 [P] [US5] Extend `tests/contract/hud-session.test.js` per hud-cadencia.md §6.12: session model has 0 zerar CTA and 0 relatório fields; allowed CTA names only `Nova mão` / `Próxima mão` / `Continuar` / `Confirmar`; `resultado` reiterates already-acertadas categories, not counters (CA-024, FR-016)
 
 ### Implementation for User Story 5
 
-- [ ] T038 [US5] Audit `index.html`, `js/mesa.js`, `css/hud.css`, and `js/quiz.js`: no report route/view, no desempenho table/chart, no **Zerar** control, no mute, no desistir, no quiz preflop; nicknames stay **Você** / **Adversário A** / **Adversário B** (FR-016, FR-025)
-- [ ] T039 [US5] Keep `js/storage.js` without a UI-facing `clear`/`zerar` export; `removeItem` only in `tests/contract/storage.test.js` (ADR-002, CA-024)
-- [ ] T040 [US5] Keep `abrirResultado()` in `js/mesa.js` as category labels already acertadas this hand (Você Flush, A Par, B Par) — MUST NOT dump `sessao.evolucao` into the HUD (FR-005, FR-016)
+- [X] T038 [US5] Audit `index.html`, `js/mesa.js`, `css/hud.css`, and `js/quiz.js`: no report route/view, no desempenho table/chart, no **Zerar** control, no mute, no desistir, no quiz preflop; nicknames stay **Você** / **Adversário A** / **Adversário B** (FR-016, FR-025)
+- [X] T039 [US5] Keep `js/storage.js` without a UI-facing `clear`/`zerar` export; `removeItem` only in `tests/contract/storage.test.js` (ADR-002, CA-024)
+- [X] T040 [US5] Keep `abrirResultado()` in `js/mesa.js` as category labels already acertadas this hand (Você Flush, A Par, B Par) — MUST NOT dump `sessao.evolucao` into the HUD (FR-005, FR-016)
 
 **Checkpoint**: User Stories 1–5 independently testable (evolução invisível na UI)
 
@@ -188,15 +188,15 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 ### Tests for User Story 6
 
-- [ ] T041 [P] [US6] Extend `tests/contract/storage.test.js` per storage.md §7.5–7.11: unreadable `{` → zeros, no throw; `mao_atual` valid without `upgrade` → upgrade zeros, `mao_atual` preserved; `{ "foo": 1 }` → hard corruption zeros; extra `"debug"` ignored; `setItem` throws → `gravar` false, no throw; two writes LWW (second blob replaces first); module references neither `document`, `alert`, `indexedDB` nor `sessionStorage`
-- [ ] T042 [P] [US6] Extend `tests/contract/quiz.test.js` (and hud-session if needed): with `indisponivel: true` storage, error/acerto still produce HUD copy and the hand can finish; 0 throw to `aplicar()`; 0 PII fields in any written blob (SC-010, FR-017)
+- [X] T041 [P] [US6] Extend `tests/contract/storage.test.js` per storage.md §7.5–7.11: unreadable `{` → zeros, no throw; `mao_atual` valid without `upgrade` → upgrade zeros, `mao_atual` preserved; `{ "foo": 1 }` → hard corruption zeros; extra `"debug"` ignored; `setItem` throws → `gravar` false, no throw; two writes LWW (second blob replaces first); module references neither `document`, `alert`, `indexedDB` nor `sessionStorage`
+- [X] T042 [P] [US6] Extend `tests/contract/quiz.test.js` (and hud-session if needed): with `indisponivel: true` storage, error/acerto still produce HUD copy and the hand can finish; 0 throw to `aplicar()`; 0 PII fields in any written blob (SC-010, FR-017)
 
 ### Implementation for User Story 6
 
-- [ ] T043 [US6] Implement read normalization in `js/storage.js` per storage.md §4: absent/unreadable/incompatible → in-memory zeros without writing; missing bucket/category → 0 preserving the rest; unknown keys ignored; non-integer/negative cell → 0 that cell only (FR-018)
-- [ ] T044 [US6] Fail-open writes in `js/storage.js` + consumers in `js/quiz.js` / `js/mesa.js`: quota/`SecurityError`/null api → `false` and keep this visit’s deltas only in `sessao.evolucao`; MUST NOT `alert`, MUST NOT HUD jargon (`localStorage`, quota, cookie), MUST NOT block the panel (FR-017, constitution VII)
-- [ ] T045 [US6] Enforce last-write-wins in `js/storage.js` `aplicarDeltas`: full blob replace; MUST NOT merge increments across tabs; MUST NOT listen to `storage` events for conflict UI (clarification + FR-017)
-- [ ] T046 [US6] Privacy lock in `js/storage.js` and `js/quiz.js`: persisted JSON only the three buckets; MUST NOT write name/e-mail/CPF/apelido/cartas/enunciados/cursor pool/timestamp/`versao`/session id; MUST NOT `fetch`/`sendBeacon`; MUST NOT prompt for identifiers (FR-015, RN-039, SC-011)
+- [X] T043 [US6] Implement read normalization in `js/storage.js` per storage.md §4: absent/unreadable/incompatible → in-memory zeros without writing; missing bucket/category → 0 preserving the rest; unknown keys ignored; non-integer/negative cell → 0 that cell only (FR-018)
+- [X] T044 [US6] Fail-open writes in `js/storage.js` + consumers in `js/quiz.js` / `js/mesa.js`: quota/`SecurityError`/null api → `false` and keep this visit’s deltas only in `sessao.evolucao`; MUST NOT `alert`, MUST NOT HUD jargon (`localStorage`, quota, cookie), MUST NOT block the panel (FR-017, constitution VII)
+- [X] T045 [US6] Enforce last-write-wins in `js/storage.js` `aplicarDeltas`: full blob replace; MUST NOT merge increments across tabs; MUST NOT listen to `storage` events for conflict UI (clarification + FR-017)
+- [X] T046 [US6] Privacy lock in `js/storage.js` and `js/quiz.js`: persisted JSON only the three buckets; MUST NOT write name/e-mail/CPF/apelido/cartas/enunciados/cursor pool/timestamp/`versao`/session id; MUST NOT `fetch`/`sendBeacon`; MUST NOT prompt for identifiers (FR-015, RN-039, SC-011)
 
 **Checkpoint**: All user stories independently functional (contrato de quiz + evolução fail-open)
 
@@ -206,12 +206,12 @@ Site estático na raiz do repositório (ADR-006 / plan.md): `index.html`, `css/`
 
 **Purpose**: Validação ponta a ponta, privacidade, idioma e guarda de escopo negativo
 
-- [ ] T047 Run `node --test tests/contract/` and close gaps against `specs/003-feedback-persistencia/contracts/quiz.md` §9, `storage.md` §7, and `hud-cadencia.md` §6 (001 audio + 002 baralho cases MUST still pass)
-- [ ] T048 [P] Update the local-test and Privacidade sections of `README.md`: mention `js/quiz.js`, `js/storage.js`, `tests/contract/quiz.test.js`, `tests/contract/storage.test.js`, and that the only persisted key is `poker-trainer:evolucao` (replace the “esta etapa ainda não grava chaves” sentence)
-- [ ] T049 Execute manual quickstart scenarios S1–S10 from `specs/003-feedback-persistencia/quickstart.md` against `http://localhost:8080` at 1280×720 (not `file://`)
-- [ ] T050 Audit DevTools Application plus source: only `poker-trainer:evolucao` (three buckets, 10+10 ids always present); zero PII/cartas/timestamp; nicknames remain **Você** / **Adversário A** / **Adversário B**; no name/e-mail fields in `index.html`, `js/mesa.js`, `js/quiz.js`, `js/storage.js`; 0 `fetch` of telemetry (SC-011)
-- [ ] T051 Confirm negative scope: no `js/motor.js`; no leftover `js/quiz-stub.js`; no relatório/zerar/mute/desistir/preflop quiz; five HUD states only; `js/baralho.js` still unused by option shuffle; RN-G001 (one question) and RN-G005 (no skip/reveal) hold in `js/quiz.js` / `js/mesa.js`
-- [ ] T052 Confirm beat adapter in `js/mesa.js` is 0 ms under `prefers-reduced-motion: reduce`, keyboard path (Tab skips dead/locked; Enter/Space submits unica or toggles multipla; **Confirmar**/**Continuar** reachable), and copy stays the exact pt-BR strings in `js/quiz.js` `COPY`
+- [X] T047 Run `node --test tests/contract/` and close gaps against `specs/003-feedback-persistencia/contracts/quiz.md` §9, `storage.md` §7, and `hud-cadencia.md` §6 (001 audio + 002 baralho cases MUST still pass)
+- [X] T048 [P] Update the local-test and Privacidade sections of `README.md`: mention `js/quiz.js`, `js/storage.js`, `tests/contract/quiz.test.js`, `tests/contract/storage.test.js`, and that the only persisted key is `poker-trainer:evolucao` (replace the “esta etapa ainda não grava chaves” sentence)
+- [X] T049 Execute manual quickstart scenarios S1–S10 from `specs/003-feedback-persistencia/quickstart.md` against `http://localhost:8080` at 1280×720 (not `file://`)
+- [X] T050 Audit DevTools Application plus source: only `poker-trainer:evolucao` (three buckets, 10+10 ids always present); zero PII/cartas/timestamp; nicknames remain **Você** / **Adversário A** / **Adversário B**; no name/e-mail fields in `index.html`, `js/mesa.js`, `js/quiz.js`, `js/storage.js`; 0 `fetch` of telemetry (SC-011)
+- [X] T051 Confirm negative scope: no `js/motor.js`; no leftover `js/quiz-stub.js`; no relatório/zerar/mute/desistir/preflop quiz; five HUD states only; `js/baralho.js` still unused by option shuffle; RN-G001 (one question) and RN-G005 (no skip/reveal) hold in `js/quiz.js` / `js/mesa.js`
+- [X] T052 Confirm beat adapter in `js/mesa.js` is 0 ms under `prefers-reduced-motion: reduce`, keyboard path (Tab skips dead/locked; Enter/Space submits unica or toggles multipla; **Confirmar**/**Continuar** reachable), and copy stays the exact pt-BR strings in `js/quiz.js` `COPY`
 
 ---
 

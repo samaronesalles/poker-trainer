@@ -53,7 +53,7 @@ npx serve .
 
 Depois acesse `http://localhost:8080`. Viewport de referência desktop: **1280×720** pixels CSS (DevTools). Abaixo disso o HUD pode empilhar; as cartas permanecem legíveis.
 
-Testes de contrato (Node 18+, sem bundler): FSM do HUD em `tests/contract/hud-session.test.js`, áudio fail-open e o gerador em `tests/contract/baralho.test.js` (`js/baralho.js` — 52 cartas, RN-044, fail-open de Web Crypto). Sem Playwright.
+Testes de contrato (Node 18+, sem bundler): FSM do HUD em `tests/contract/hud-session.test.js`, quiz em `tests/contract/quiz.test.js`, persistência em `tests/contract/storage.test.js`, áudio fail-open e o gerador em `tests/contract/baralho.test.js`. Módulos de domínio: `js/quiz.js` e `js/storage.js`. Sem Playwright.
 
 ```bash
 node --test tests/contract/
@@ -65,7 +65,7 @@ Publicação prevista via **GitHub Pages** a partir da branch `main`. Detalhes e
 
 ## Privacidade
 
-Não há cadastro, login nem envio de dados a servidor. Avatares e apelidos (**Você**, **Adversário A**, **Adversário B**) são de produto, não de cadastro. A sessão da mesa vive só em memória (recarregar volta à mesa ociosa). Contadores de evolução, quando existirem, ficarão no `localStorage` da origem — esta etapa ainda não grava chaves. Limpar os dados do site apaga a evolução futura.
+Não há cadastro, login nem envio de dados a servidor. Avatares e apelidos (**Você**, **Adversário A**, **Adversário B**) são de produto, não de cadastro. A sessão da mesa vive só em memória (recarregar aborta a mão e volta à mesa ociosa). O único dado persistido é o JSON de contadores de treino (`mao_atual`, `upgrade`, `vencedor_pote`) na chave `poker-trainer:evolucao` do `localStorage` da origem — sem PII, sem cartas, sem timestamp. Limpar os dados do site apaga a evolução. Não há botão zerar nem tela de relatório.
 
 ## Licença
 

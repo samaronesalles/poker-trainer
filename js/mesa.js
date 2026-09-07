@@ -1,7 +1,7 @@
 /**
- * SessÃ£o da mesa + FSM do HUD (exportÃ¡vel sem DOM).
- * Consome js/baralho.js (RN-044). MUST NOT escrever localStorage.
- * MUST NOT criar motor/quiz/storage. MUST NOT reescrever quiz-stub.
+ * Sesso da mesa + FSM do HUD (exportvel sem DOM).
+ * Consome js/baralho.js (RN-044), js/quiz.js e js/storage.js.
+ * MUST NOT chamar localStorage direto. MUST NOT criar js/motor.js.
  */
 
 import { unlock as unlockAudio, play as playAudio } from './audio.js';
@@ -14,26 +14,38 @@ import {
 import { aplicarVisibilidade, criarBurnCenico, criarElementoCarta } from './carta.js';
 import {
   APELIDOS,
+  CATEGORIA_ADVERSARIO_ROTULO,
   CATEGORIA_CORRETA_ROTULO,
   COPY,
-  criarOpcoesCategoria,
-  criarOpcoesVencedor,
-  enunciadoDoPasso,
   PASSOS,
+  apresentarPergunta,
+  avaliarUnica,
+  alternarOpcao,
+  confirmarMultipla,
+  modoDoPasso,
   rotuloVencedorCorreto,
-} from './quiz-stub.js';
+} from './quiz.js';
+import { criarStorage } from './storage.js';
 
-export const LINHA_ERRO_MONTAGEM = 'NÃ£o foi possÃ­vel embaralhar. Tente de novo.';
+export const LINHA_ERRO_MONTAGEM = 'No foi possvel embaralhar. Tente de novo.';
+export const BEAT_ACERTO_MS = 400;
 
 export const EVENTOS = Object.freeze({
   INICIAR_MAO: 'INICIAR_MAO',
   PROXIMA_MAO: 'PROXIMA_MAO',
   CONTINUAR: 'CONTINUAR',
   ESCOLHER_OPCAO: 'ESCOLHER_OPCAO',
+  ALTERNAR_OPCAO: 'ALTERNAR_OPCAO',
+  CONFIRMAR: 'CONFIRMAR',
+  FIM_BEAT_ACERTO: 'FIM_BEAT_ACERTO',
   FIM_ANIMACAO_STREET: 'FIM_ANIMACAO_STREET',
   FALHA_DEAL: 'FALHA_DEAL',
   FALHA_MONTAGEM: 'FALHA_MONTAGEM',
 });
+
+export function duracaoBeatMs(movimentoReduzido) {
+  return movimentoReduzido ? 0 : BEAT_ACERTO_MS;
+}
 
 export function tetoStreetMs(indiceMaoSessao, movimentoReduzido) {
   if (movimentoReduzido) return 0;
@@ -49,6 +61,7 @@ function hudOciosa() {
     opcoes: [],
     cta: { nome: COPY.ctaNovaMao },
     feedback: null,
+    feedbackTexto: null,
     categoriasIdentificadas: { voce: null, adversarioA: null, adversarioB: null },
   };
 }
@@ -101,7 +114,8 @@ function boardVazio() {
   };
 }
 
-export function criarSessao() {
+export function criarSessao({ storage } = {}) {
+  const store = storage ?? criarStorage();
   return {
     hud: hudOciosa(),
     assentos: assentosVazios(),
@@ -112,6 +126,8 @@ export function criarSessao() {
     movimentoReduzido: false,
     misturaVisita: criarMisturaVisita(),
     montagemEmCurso: false,
+    storage: store,
+    evolucao: store.ler(),
   };
 }
 
@@ -123,6 +139,7 @@ function entrarDeal(sessao) {
   sessao.hud.opcoes = [];
   sessao.hud.cta = null;
   sessao.hud.feedback = null;
+  sessao.hud.feedbackTexto = null;
 }
 
 function novaMao(sessao, payload) {
@@ -140,6 +157,10 @@ function novaMao(sessao, payload) {
     cartasJogo: clonarCartasJogo(payload.cartasJogo),
     street: 'preflop',
     passo: null,
+    faseTentativa: null,
+    modo: null,
+    corretaUnica: null,
+    conjuntoCorreto: [],
     cartasDaStreetPousadas: false,
     viradaShowdownConcluida: false,
     falhaDeal: false,
@@ -203,17 +224,7 @@ function preencherSlots(sessao, de, ate, visibilidade = 'face') {
 }
 
 function abrirPergunta(sessao, passo) {
-  sessao.mao.passo = passo;
-  sessao.mao.cartasDaStreetPousadas = true;
-  sessao.hud.estado = 'perguntando';
-  sessao.hud.enunciado = enunciadoDoPasso(passo);
-  sessao.hud.linhaProposito = null;
-  sessao.hud.cta = null;
-  sessao.hud.feedback = null;
-  sessao.hud.opcoes =
-    passo === PASSOS.river_vencedor
-      ? criarOpcoesVencedor(sessao.indiceMaoSessao)
-      : criarOpcoesCategoria();
+  apresentarPergunta(sessao, passo);
 }
 
 function abrirSkip(sessao, passo) {
@@ -234,8 +245,8 @@ function abrirResultado(sessao) {
   sessao.hud.feedback = 'acerto';
   sessao.hud.categoriasIdentificadas = {
     voce: CATEGORIA_CORRETA_ROTULO,
-    adversarioA: CATEGORIA_CORRETA_ROTULO,
-    adversarioB: CATEGORIA_CORRETA_ROTULO,
+    adversarioA: CATEGORIA_ADVERSARIO_ROTULO,
+    adversarioB: CATEGORIA_ADVERSARIO_ROTULO,
   };
   sessao.pote = {
     modo: split ? 'split' : 'para_vencedor',
@@ -246,7 +257,16 @@ function abrirResultado(sessao) {
 function avancarAcerto(sessao) {
   const { passo } = sessao.mao;
   if (passo === PASSOS.flop_hero) {
-    abrirSkip(sessao, PASSOS.flop_skip);
+    abrirPergunta(sessao, PASSOS.flop_upgrade);
+    return;
+  }
+  if (passo === PASSOS.flop_upgrade) {
+    sessao.mao.street = 'turn';
+    sessao.mao.passo = null;
+    sessao.mao.faseTentativa = null;
+    sessao.mao.cartasDaStreetPousadas = false;
+    sessao.board.burnVisivel = { papel: 'burn_cenico', visibilidade: 'verso' };
+    entrarDeal(sessao);
     return;
   }
   if (passo === PASSOS.turn_hero) {
@@ -255,17 +275,14 @@ function avancarAcerto(sessao) {
   }
   if (passo === PASSOS.river_hero) {
     abrirPergunta(sessao, PASSOS.river_a);
-    sessao.hud.feedback = 'acerto';
     return;
   }
   if (passo === PASSOS.river_a) {
     abrirPergunta(sessao, PASSOS.river_b);
-    sessao.hud.feedback = 'acerto';
     return;
   }
   if (passo === PASSOS.river_b) {
     abrirPergunta(sessao, PASSOS.river_vencedor);
-    sessao.hud.feedback = 'acerto';
     return;
   }
   if (passo === PASSOS.river_vencedor) {
@@ -312,38 +329,26 @@ function fimAnimacao(sessao, etapa) {
 }
 
 function escolherOpcao(sessao, id) {
-  if (sessao.hud.estado !== 'perguntando') return;
-  const opcao = sessao.hud.opcoes.find((item) => item.id === id);
-  if (!opcao || opcao.desabilitada) return;
-  if (!opcao.correta) {
-    opcao.desabilitada = true;
-    opcao.estadoVisual = 'errado_desabilitado';
-    sessao.hud.feedback = 'erro';
-    return;
-  }
-  opcao.estadoVisual = 'correto';
-  sessao.hud.feedback = 'acerto';
-  avancarAcerto(sessao);
+  avaliarUnica(sessao, id);
 }
 
 function continuar(sessao) {
   if (sessao.hud.estado !== 'sem_upgrade' || !sessao.mao) return;
-  if (sessao.mao.passo === PASSOS.flop_skip) {
-    sessao.mao.street = 'turn';
-    sessao.mao.passo = null;
-    sessao.mao.cartasDaStreetPousadas = false;
-    sessao.board.burnVisivel = { papel: 'burn_cenico', visibilidade: 'verso' };
-    entrarDeal(sessao);
-    return;
-  }
   if (sessao.mao.passo === PASSOS.turn_skip) {
     sessao.mao.street = 'river';
     sessao.mao.passo = null;
+    sessao.mao.faseTentativa = null;
     sessao.mao.cartasDaStreetPousadas = false;
     sessao.mao.viradaShowdownConcluida = false;
     sessao.board.burnVisivel = { papel: 'burn_cenico', visibilidade: 'verso' };
     entrarDeal(sessao);
   }
+}
+
+function fimBeatAcerto(sessao) {
+  if (!sessao.mao || sessao.hud.estado !== 'perguntando') return;
+  if (sessao.mao.faseTentativa !== 'aguardando_beat') return;
+  avancarAcerto(sessao);
 }
 
 export function aplicar(sessao, evento, payload = {}) {
@@ -361,6 +366,15 @@ export function aplicar(sessao, evento, payload = {}) {
       return sessao;
     case EVENTOS.ESCOLHER_OPCAO:
       escolherOpcao(sessao, payload.id);
+      return sessao;
+    case EVENTOS.ALTERNAR_OPCAO:
+      alternarOpcao(sessao, payload.id);
+      return sessao;
+    case EVENTOS.CONFIRMAR:
+      confirmarMultipla(sessao);
+      return sessao;
+    case EVENTOS.FIM_BEAT_ACERTO:
+      fimBeatAcerto(sessao);
       return sessao;
     case EVENTOS.FIM_ANIMACAO_STREET:
       fimAnimacao(sessao, payload.etapa);
@@ -572,6 +586,10 @@ function renderHud() {
   if (sessao.hud.estado === 'perguntando') {
     linha.textContent = sessao.hud.enunciado ?? '';
     hud.append(linha, feedback, gradeOpcoes());
+    const confirmar =
+      sessao.hud.cta?.nome === COPY.ctaConfirmar &&
+      sessao.mao?.faseTentativa !== 'aguardando_beat';
+    if (confirmar) hud.append(acoesCta(COPY.ctaConfirmar));
     focarPrimeiroHabilitado(hud);
     return;
   }
@@ -593,7 +611,7 @@ function renderHud() {
         : `${rotuloVencedorCorreto(sessao.indiceMaoSessao)} levou o pote.`;
     const cats = document.createElement('p');
     const c = sessao.hud.categoriasIdentificadas;
-    cats.textContent = `${APELIDOS.voce}: ${c.voce} Â· ${APELIDOS.adversarioA}: ${c.adversarioA} Â· ${APELIDOS.adversarioB}: ${c.adversarioB}`;
+    cats.textContent = `${APELIDOS.voce}: ${c.voce}  ${APELIDOS.adversarioA}: ${c.adversarioA}  ${APELIDOS.adversarioB}: ${c.adversarioB}`;
     bloco.append(venceu, cats);
     hud.append(bloco, acoesCta(COPY.ctaProximaMao));
     focarPrimeiroHabilitado(hud);
@@ -616,18 +634,41 @@ function acoesCta(nome) {
 function gradeOpcoes() {
   const wrap = document.createElement('div');
   wrap.className = 'hud__opcoes';
+  const multipla = modoDoPasso(sessao.mao?.passo) === 'multipla';
   for (const opcao of sessao.hud.opcoes) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn--opcao';
     btn.dataset.opcaoId = opcao.id;
     btn.dataset.estado = opcao.estadoVisual;
-    btn.textContent = opcao.rotulo;
-    btn.disabled = opcao.desabilitada;
+    btn.disabled = !opcao.ativavel;
+    btn.tabIndex = opcao.ativavel ? 0 : -1;
+    const rotulo = document.createElement('span');
+    rotulo.className = 'btn__rotulo';
+    rotulo.textContent = opcao.rotulo;
+    btn.append(rotulo);
+    if (opcao.marca === 'acerto' || opcao.marca === 'corte') {
+      const marca = document.createElement('span');
+      marca.className = 'btn__marca';
+      marca.setAttribute('aria-hidden', 'true');
+      marca.textContent = opcao.marca === 'acerto' ? '\u2713' : '\u2715';
+      btn.append(marca);
+    }
+    if (multipla) {
+      btn.setAttribute('aria-pressed', marcadaVisual(opcao) ? 'true' : 'false');
+    }
     btn.addEventListener('click', () => onOpcao(opcao.id));
     wrap.append(btn);
   }
   return wrap;
+}
+
+function marcadaVisual(opcao) {
+  return (
+    opcao.selecionada === true ||
+    opcao.estadoVisual === 'selecionada' ||
+    opcao.estadoVisual === 'acertada'
+  );
 }
 
 function focarPrimeiroHabilitado(hud) {
@@ -752,6 +793,7 @@ function aplicarMontagemNaHud(proxima, resultado) {
 
 async function iniciarMao({ proxima = false } = {}) {
   if (ritualTrava || sessao.montagemEmCurso) return;
+  cancelarBeat();
   ritualTrava = true;
   sessao.montagemEmCurso = true;
   try {
@@ -821,6 +863,39 @@ async function recolherCartas() {
   limparCartas();
 }
 
+let beatTimer = 0;
+
+function cancelarBeat() {
+  if (beatTimer) {
+    clearTimeout(beatTimer);
+    beatTimer = 0;
+  }
+}
+
+function aposFimBeatVisual() {
+  renderHud();
+  atualizarPote();
+  if (sessao.hud.estado === 'deal' && sessao.mao?.street === 'turn') {
+    void ritualTurnOuRiver('turn', 4);
+  }
+}
+
+function agendarFimBeatAcerto() {
+  cancelarBeat();
+  const disparar = () => {
+    beatTimer = 0;
+    if (sessao.mao?.faseTentativa !== 'aguardando_beat') return;
+    aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
+    aposFimBeatVisual();
+  };
+  const ms = duracaoBeatMs(sessao.movimentoReduzido);
+  if (ms <= 0) {
+    disparar();
+    return;
+  }
+  beatTimer = setTimeout(disparar, ms);
+}
+
 function onCta(nome) {
   if (nome === COPY.ctaNovaMao) {
     void iniciarMao({ proxima: false });
@@ -830,20 +905,36 @@ function onCta(nome) {
     void iniciarMao({ proxima: true });
     return;
   }
+  if (nome === COPY.ctaConfirmar) {
+    if (sessao.mao?.faseTentativa === 'aguardando_beat') return;
+    aplicar(sessao, EVENTOS.CONFIRMAR);
+    if (sessao.hud.feedback === 'erro') {
+      playAudio('erro');
+      flashHud('erro');
+    } else if (sessao.hud.feedback === 'acerto') {
+      playAudio('acerto');
+      flashHud('acerto');
+    }
+    renderHud();
+    if (sessao.mao?.faseTentativa === 'aguardando_beat') agendarFimBeatAcerto();
+    return;
+  }
   if (nome === COPY.ctaContinuar) {
     const passo = sessao.mao?.passo;
     aplicar(sessao, EVENTOS.CONTINUAR);
     renderHud();
-    if (passo === PASSOS.flop_skip) void ritualTurnOuRiver('turn', 4);
     if (passo === PASSOS.turn_skip) void ritualTurnOuRiver('river', 5);
   }
 }
 
 function onOpcao(id) {
-  const antes = sessao.hud.estado;
-  const passo = sessao.mao?.passo;
+  const modo = modoDoPasso(sessao.mao?.passo);
+  if (modo === 'multipla') {
+    aplicar(sessao, EVENTOS.ALTERNAR_OPCAO, { id });
+    renderHud();
+    return;
+  }
   aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id });
-  const depois = sessao.hud.estado;
   if (sessao.hud.feedback === 'erro') {
     playAudio('erro');
     flashHud('erro');
@@ -853,9 +944,7 @@ function onOpcao(id) {
   }
   renderHud();
   atualizarPote();
-  void antes;
-  void passo;
-  void depois;
+  if (sessao.mao?.faseTentativa === 'aguardando_beat') agendarFimBeatAcerto();
 }
 
 function onPointerMove(evento) {

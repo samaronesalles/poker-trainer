@@ -110,16 +110,49 @@
   color: #1a1208;
 }
 
-.btn--opcao[data-estado='correto'] {
+.btn--opcao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.btn__rotulo {
+  pointer-events: none;
+}
+
+.btn__marca {
+  font-weight: 800;
+  font-size: 1.05em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.btn--opcao[data-estado='selecionada'] {
+  border-color: #e8d6a0;
+  box-shadow: inset 0 0 0 1px rgba(232, 214, 160, 0.85);
+  background: #2a3348;
+}
+
+.btn--opcao[data-estado='acertada'] {
   background: #1e4a32;
   border-color: #7dcaa0;
   color: #e8fff2;
 }
 
-.btn--opcao[data-estado='errado_desabilitado'] {
+.btn--opcao[data-estado='acertada'] .btn__marca {
+  color: #b7e0c2;
+}
+
+.btn--opcao[data-estado='eliminada'] {
   background: #3a1c1c;
   border-color: #8a4444;
   opacity: 0.55;
+  font-weight: 400;
+}
+
+.btn--opcao[data-estado='eliminada'] .btn__marca {
+  color: #f0b4a8;
 }
 
 .hud[data-hud-estado='deal'] .hud__linha {

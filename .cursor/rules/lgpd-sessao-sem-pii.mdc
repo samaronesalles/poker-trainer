@@ -1,5 +1,5 @@
 ---
-description: Sessão da mesa sem PII, sem cadastro e sem persistência nesta feature
+description: Sessão da mesa sem PII; evolução só com contadores na chave poker-trainer:evolucao
 globs: index.html,js/**/*.js,css/**/*.css
 alwaysApply: true
 ---
@@ -7,7 +7,7 @@ alwaysApply: true
 # LGPD — Sessão local sem dado pessoal
 
 ## Contexto
-A mesa (features 001–002) opera um treino single-player no navegador. Apelidos e avatares são de produto. Recarregar aborta a mão e apaga o pool de mistura. Evolução em `localStorage` é de feature posterior. Coordenadas de ponteiro só misturam um buffer compacto em memória e são descartadas — sem trajetória, sem log.
+A mesa (features 001–003) opera um treino single-player no navegador. Apelidos e avatares são de produto. Recarregar aborta a mão e apaga o pool de mistura. A evolução persiste **somente** contadores de treino no `localStorage` da origem. Coordenadas de ponteiro só misturam um buffer compacto em memória e são descartadas — sem trajetória, sem log.
 
 ## Artigo(s) LGPD aplicável(is)
 - Art. 6º, III (necessidade): não coletar o que o treino não precisa.
@@ -16,23 +16,28 @@ A mesa (features 001–002) opera um treino single-player no navegador. Apelidos e
 
 ## Regra
 NUNCA peça, armazene ou envie CPF, e-mail, nome real, apelido digitado, telefone, foto de pessoa ou qualquer identificador.
-NUNCA escreva `localStorage` / cookies / fingerprint nesta etapa da mesa.
+NUNCA grave cartas, pool de cursor, timestamp, `versao` ou session id no `localStorage`.
+SEMPRE persista, se persistir, **somente** os buckets `mao_atual`, `upgrade` e `vencedor_pote` na chave `poker-trainer:evolucao`, via `js/storage.js`.
 SEMPRE use os apelidos fixos **Você**, **Adversário A**, **Adversário B** e avatares ilustrados (ficha de personagem), nunca foto real nem upload.
+`js/mesa.js` MUST NOT chamar `localStorage` direto. Sem botão zerar, sem relatório, fail-open se o armazenamento falhar.
 
 ## Exemplo INCORRETO
 ```js
 const nome = prompt('Seu apelido na mesa');
 localStorage.setItem('jogador', nome);
+localStorage.setItem('poker-trainer:evolucao', JSON.stringify({ email, mao_atual }));
 ```
 
 ## Exemplo CORRETO
 ```js
 const APELIDOS = { voce: 'Você', adversarioA: 'Adversário A', adversarioB: 'Adversário B' };
-// estado só em memória; reload ? ociosa
+storage.aplicarDeltas({ bucket: 'mao_atual', categoria: 'flush', acertos: 1 });
+// JSON só com os três buckets; reload da página aborta a mão, não zera a chave
 ```
 
 ## Quando esta rule NÃO se aplica
-- Feature 003 poderá persistir **somente** contadores de treino (`mao_atual`, `upgrade`, `vencedor_pote`) no `localStorage` da origem, sem PII, com fail-open. Ainda assim, sem cadastro e sem envio a servidor.
+- Features posteriores MAY ler os mesmos contadores para um relatório pós-MVP, ainda sem PII e sem envio a servidor — exige emenda de constitution.
 
 ## Histórico
 - Criada ao implementar o casco da mesa (feature 001-mesa-imersiva).
+- Atualizada ao implementar feedback e persistência (feature 003-feedback-persistencia).
