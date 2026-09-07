@@ -1,6 +1,6 @@
 /**
- * Motor de avaliação: melhor 5 + RN-017; sem enumerador; sem quemGanhou.
- * MUST NOT persistir Melhor5, kickers, cartas ou chaveDesempate.
+ * Motor de avaliação: melhor 5 + RN-017 + enumerador de upgrades; sem quemGanhou.
+ * MUST NOT persistir Melhor5, kickers, cartas, runouts, snapshot ou chaveDesempate.
  */
 
 import { NAIPES, RANKS } from './baralho.js';
@@ -317,4 +317,104 @@ export function conjuntoOpcoesMaoAtual({ categoriaId, board } = {}) {
   }
 
   return ids;
+}
+
+function identidadeChave(carta) {
+  return `${carta?.rank}-${carta?.naipe}`;
+}
+
+export function snapshotDesconhecido(visiveis) {
+  const usados = new Set();
+  for (const carta of visiveis ?? []) {
+    usados.add(identidadeChave(carta));
+  }
+  const cartas = [];
+  for (const rank of RANKS) {
+    for (const naipe of NAIPES) {
+      if (!usados.has(`${rank}-${naipe}`)) {
+        cartas.push({ rank, naipe });
+      }
+    }
+  }
+  return cartas;
+}
+
+function todasMaisFortesTestemunhadas(testemunhadas, maisFortes) {
+  return maisFortes.every((id) => testemunhadas.has(id));
+}
+
+export function enumerarUpgrades({ holeHeroi, comunitarias } = {}) {
+  try {
+    if (!Array.isArray(holeHeroi) || holeHeroi.length !== 2) return { ok: false };
+    if (!Array.isArray(comunitarias) || (comunitarias.length !== 3 && comunitarias.length !== 4)) {
+      return { ok: false };
+    }
+
+    const visiveis = [...holeHeroi, ...comunitarias];
+    const chaves = visiveis.map(identidadeChave);
+    if (chaves.some((chave) => chave === 'undefined-undefined' || chave === 'null-null')) {
+      return { ok: false };
+    }
+    if (new Set(chaves).size !== visiveis.length) return { ok: false };
+
+    const desconhecidas = snapshotDesconhecido(visiveis);
+    const esperado = comunitarias.length === 3 ? 47 : 46;
+    if (desconhecidas.length !== esperado) return { ok: false };
+
+    const atual = avaliarMelhor5(visiveis);
+    const forcaAtual = FORCA[atual.categoriaId];
+    const maisFortes = CATEGORIAS.filter(
+      (item) => FORCA[item.id] > forcaAtual && item.id !== 'carta_alta',
+    ).map((item) => item.id);
+
+    const testemunhadas = new Set();
+    if (comunitarias.length === 3) {
+      for (let i = 0; i < desconhecidas.length; i += 1) {
+        if (todasMaisFortesTestemunhadas(testemunhadas, maisFortes)) break;
+        for (let j = i + 1; j < desconhecidas.length; j += 1) {
+          const melhor = avaliarMelhor5([
+            ...holeHeroi,
+            ...comunitarias,
+            desconhecidas[i],
+            desconhecidas[j],
+          ]);
+          testemunhadas.add(melhor.categoriaId);
+          if (todasMaisFortesTestemunhadas(testemunhadas, maisFortes)) break;
+        }
+      }
+    } else {
+      for (const river of desconhecidas) {
+        const melhor = avaliarMelhor5([...holeHeroi, ...comunitarias, river]);
+        testemunhadas.add(melhor.categoriaId);
+        if (todasMaisFortesTestemunhadas(testemunhadas, maisFortes)) break;
+      }
+    }
+
+    const upgrades = maisFortes.filter((id) => testemunhadas.has(id));
+    return { ok: true, categoriaAtual: atual.categoriaId, upgrades };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export function conjuntoOpcoesUpgrade({ upgrades } = {}) {
+  const pedido = Array.isArray(upgrades) ? upgrades : [];
+  const ordenados = CATEGORIAS.map((item) => item.id).filter((id) => pedido.includes(id));
+  if (ordenados.length === 0) {
+    return { ids: [], verdadeiros: [] };
+  }
+  if (ordenados.length >= 6) {
+    const ids = ordenados.slice(0, 6);
+    return { ids, verdadeiros: [...ids] };
+  }
+  const ids = [...ordenados];
+  const verdadeiros = [...ordenados];
+  const visto = new Set(ids);
+  for (const item of CATEGORIAS) {
+    if (ids.length >= 6) break;
+    if (visto.has(item.id)) continue;
+    visto.add(item.id);
+    ids.push(item.id);
+  }
+  return { ids, verdadeiros };
 }

@@ -49,10 +49,43 @@ function acertarHeroStreet(sessao) {
   acertarUnica(sessao, sessao.mao.corretaUnica);
 }
 
-function acertarUpgradeStub(sessao) {
-  aplicar(sessao, EVENTOS.ALTERNAR_OPCAO, { id: 'flush' });
+function acertarUpgradeExibido(sessao) {
+  for (const item of sessao.hud.opcoes.filter((opcao) => opcao.verdadeira && opcao.ativavel)) {
+    aplicar(sessao, EVENTOS.ALTERNAR_OPCAO, { id: item.id });
+  }
   aplicar(sessao, EVENTOS.CONFIRMAR);
   aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
+}
+
+function concluirPosMaoAtual(sessao) {
+  if (sessao.hud.estado === 'ociosa') return;
+  if (sessao.hud.estado === 'sem_upgrade') {
+    aplicar(sessao, EVENTOS.CONTINUAR);
+    return;
+  }
+  if (sessao.mao?.passo === PASSOS.flop_upgrade || sessao.mao?.passo === PASSOS.turn_upgrade) {
+    acertarUpgradeExibido(sessao);
+  }
+}
+
+function payloadParFlop() {
+  const onze = [
+    { rank: 'K', naipe: 'espadas' },
+    { rank: 'K', naipe: 'copas' },
+    { rank: 'Q', naipe: 'espadas' },
+    { rank: 'Q', naipe: 'copas' },
+    { rank: '2', naipe: 'espadas' },
+    { rank: '9', naipe: 'copas' },
+    { rank: '2', naipe: 'copas' },
+    { rank: 'A', naipe: 'ouros' },
+    { rank: '7', naipe: 'paus' },
+    { rank: '3', naipe: 'ouros' },
+    { rank: '4', naipe: 'paus' },
+  ];
+  const usadas = new Set(onze.map((item) => `${item.rank}-${item.naipe}`));
+  const resto = criarBaralhoPadrao().filter((item) => !usadas.has(`${item.rank}-${item.naipe}`));
+  const permutacao = [...onze, ...resto];
+  return { permutacao, cartasJogo: cartasDeJogo(permutacao) };
 }
 
 function ate(sessao, alvo, payload = payloadMontagem()) {
@@ -62,14 +95,14 @@ function ate(sessao, alvo, payload = payloadMontagem()) {
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'flop' });
   if (alvo === 'flop_hero') return;
   acertarHeroStreet(sessao);
-  if (alvo === 'flop_upgrade') return;
-  acertarUpgradeStub(sessao);
+  if (alvo === 'flop_upgrade' || alvo === 'flop_skip') return;
+  concluirPosMaoAtual(sessao);
   if (alvo === 'turn_deal') return;
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
   if (alvo === 'turn_hero') return;
   acertarHeroStreet(sessao);
-  if (alvo === 'turn_skip') return;
-  aplicar(sessao, EVENTOS.CONTINUAR);
+  if (alvo === 'turn_skip' || alvo === 'turn_upgrade') return;
+  concluirPosMaoAtual(sessao);
   if (alvo === 'river_deal') return;
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'river' });
   if (alvo === 'river') return;
@@ -203,38 +236,41 @@ test('escolha da correta permanece perguntando at FIM_BEAT_ACERTO', () => {
   assert.equal(opcao(sessao, id).marca, 'acerto');
 });
 
-test('6. flush + FIM_BEAT_ACERTO ? flop_upgrade com Confirmar, 0 sem_upgrade', () => {
+test('6. acerto da 5.3 + beat ? flop_upgrade ou flop_skip; turn fechado', () => {
   const sessao = criarSessao();
-  ate(sessao, 'flop_upgrade');
+  ate(sessao, 'flop_upgrade', payloadParFlop());
   assert.equal(sessao.hud.estado, 'perguntando');
   assert.equal(sessao.mao.passo, PASSOS.flop_upgrade);
   assert.equal(sessao.hud.cta?.nome, COPY.ctaConfirmar);
   assert.equal(sessao.hud.enunciado, COPY.enunciadoUpgrades);
   assert.notEqual(sessao.hud.estado, 'sem_upgrade');
-  assert.equal(PASSOS.flop_skip, undefined);
+  assert.equal(PASSOS.flop_skip, 'flop_skip');
+  assert.notEqual(sessao.mao.street, 'turn');
 });
 
 test('ALTERNAR_OPCAO em flop_upgrade permanece perguntando com feedback null', () => {
   const sessao = criarSessao();
-  ate(sessao, 'flop_upgrade');
-  aplicar(sessao, EVENTOS.ALTERNAR_OPCAO, { id: 'flush' });
+  ate(sessao, 'flop_upgrade', payloadParFlop());
+  const alvo = sessao.hud.opcoes[0];
+  aplicar(sessao, EVENTOS.ALTERNAR_OPCAO, { id: alvo.id });
   assert.equal(sessao.hud.estado, 'perguntando');
   assert.equal(sessao.hud.feedback, null);
 });
 
-test('7. CONFIRMAR s flush + beat ? deal turn, no skip', () => {
+test('7. conjunto correto + beat ? deal turn, no skip', () => {
   const sessao = criarSessao();
-  ate(sessao, 'turn_deal');
+  ate(sessao, 'turn_deal', payloadParFlop());
   assert.equal(sessao.hud.estado, 'deal');
   assert.equal(sessao.mao.street, 'turn');
   assert.equal(sessao.hud.opcoes.length, 0);
   assert.equal(sessao.hud.cta, null);
 });
 
-test('8. turn_hero acertado ? sem_upgrade + Continuar; Continuar ? deal river', () => {
+test('8. turn_hero acertado em SF sem upgrade ? sem_upgrade + Continuar ? deal river', () => {
   const sessao = criarSessao();
-  ate(sessao, 'turn_skip');
+  ate(sessao, 'turn_skip', payloadFabrica());
   assert.equal(sessao.hud.estado, 'sem_upgrade');
+  assert.equal(sessao.mao.passo, PASSOS.turn_skip);
   assert.equal(sessao.hud.cta?.nome, COPY.ctaContinuar);
   aplicar(sessao, EVENTOS.CONTINUAR);
   assert.equal(sessao.hud.estado, 'deal');
@@ -299,10 +335,10 @@ test('13. segunda mo, vencedor voce_a ? resultado split', () => {
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'holes' });
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'flop' });
   acertarHeroStreet(sessao);
-  acertarUpgradeStub(sessao);
+  concluirPosMaoAtual(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
   acertarHeroStreet(sessao);
-  aplicar(sessao, EVENTOS.CONTINUAR);
+  concluirPosMaoAtual(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'river' });
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
   acertarUnica(sessao, 'flush');
@@ -345,7 +381,7 @@ test('CONTINUAR / streets no substituem cartasJogo nem permutacao', () => {
   const permAntes = sessao.mao.permutacao.map(chave).join('|');
   const flopAntes = [6, 7, 8].map((i) => chave(sessao.mao.cartasJogo[i]));
   acertarHeroStreet(sessao);
-  acertarUpgradeStub(sessao);
+  concluirPosMaoAtual(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
   assert.equal(sessao.mao.cartasJogo.map(chave).join('|'), jogoAntes);
   assert.equal(sessao.mao.permutacao.map(chave).join('|'), permAntes);
@@ -356,7 +392,7 @@ test('CONTINUAR / streets no substituem cartasJogo nem permutacao', () => {
   assert.equal(chave(sessao.board.slots[0].carta), chave(payload.cartasJogo[6]));
   assert.equal(chave(sessao.board.slots[3].carta), chave(payload.cartasJogo[9]));
   acertarHeroStreet(sessao);
-  aplicar(sessao, EVENTOS.CONTINUAR);
+  concluirPosMaoAtual(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'river' });
   assert.equal(chave(sessao.board.slots[0].carta), chave(payload.cartasJogo[6]));
   assert.equal(chave(sessao.board.slots[3].carta), chave(payload.cartasJogo[9]));
@@ -447,14 +483,16 @@ test('sesso no tem CTA zerar nem campos de relatrio; CTAs permitidos', () => 
   assert.equal('zerar' in sessao, false);
   assert.equal('relatorio' in sessao, false);
   assert.equal(sessao.hud.cta?.nome, COPY.ctaNovaMao);
-  ate(sessao, 'flop_upgrade');
+  ate(sessao, 'flop_upgrade', payloadParFlop());
   assert.ok(permitidos.has(sessao.hud.cta.nome));
-  ate(sessao, 'turn_skip');
-  assert.ok(permitidos.has(sessao.hud.cta.nome));
-  ate(sessao, 'river_vencedor');
-  acertarUnica(sessao, 'voce');
-  assert.ok(permitidos.has(sessao.hud.cta.nome));
-  assert.equal(sessao.hud.cta.nome, COPY.ctaProximaMao);
+  const skip = criarSessao();
+  ate(skip, 'turn_skip', payloadFabrica());
+  assert.ok(permitidos.has(skip.hud.cta.nome));
+  const fim = criarSessao();
+  ate(fim, 'river_vencedor', payloadFabrica());
+  acertarUnica(fim, 'voce');
+  assert.ok(permitidos.has(fim.hud.cta.nome));
+  assert.equal(fim.hud.cta.nome, COPY.ctaProximaMao);
 });
 
 test('beat 400 ms padro e 0 se movimento reduzido', () => {
@@ -490,4 +528,42 @@ test('T022: flop e turn da mesma mao sao duas 1as tentativas; turn_skip nao grav
   assert.equal(sessao.hud.estado, 'sem_upgrade');
   assert.equal(sessao.mao.passo, PASSOS.turn_skip);
   assert.equal(JSON.stringify(sessao.evolucao.upgrade), upgradeAntes);
+});
+
+test('FIM_BEAT_ACERTO em flop_hero no abre o turn', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'flop_upgrade', payloadParFlop());
+  assert.notEqual(sessao.mao.street, 'turn');
+  assert.notEqual(sessao.mao.passo, PASSOS.turn_hero);
+  assert.ok(sessao.mao.passo === PASSOS.flop_upgrade || sessao.mao.passo === PASSOS.flop_skip);
+});
+
+test('duplicata nas visveis no pouso ? ociosa + copy de enumerao', () => {
+  const sessao = criarSessao();
+  aplicar(sessao, EVENTOS.INICIAR_MAO, payloadParFlop());
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'holes' });
+  sessao.mao.cartasJogo[5] = { ...sessao.mao.cartasJogo[6] };
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'flop' });
+  assert.equal(sessao.hud.estado, 'ociosa');
+  assert.equal(sessao.mao, null);
+  assert.equal(sessao.hud.linhaErro, COPY.linhaErroEnumeracao);
+  assert.equal(sessao.hud.cta?.nome, COPY.ctaNovaMao);
+  assert.notEqual(sessao.hud.estado, 'sem_upgrade');
+});
+
+test('flop e turn no-skip: duas 1s Confirmar em upgrade; 0 toque em mao_atual nesta pergunta', () => {
+  const { api } = memoria();
+  const sessao = criarSessao({ storage: criarStorage({ api }) });
+  ate(sessao, 'flop_upgrade', payloadParFlop());
+  const maoAntes = JSON.stringify(sessao.evolucao.mao_atual);
+  const vencedorAntes = JSON.stringify(sessao.evolucao.vencedor_pote);
+  acertarUpgradeExibido(sessao);
+  assert.equal(JSON.stringify(sessao.evolucao.mao_atual), maoAntes);
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
+  acertarHeroStreet(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.turn_upgrade);
+  const upgradeFlop = JSON.stringify(sessao.evolucao.upgrade);
+  acertarUpgradeExibido(sessao);
+  assert.notEqual(JSON.stringify(sessao.evolucao.upgrade), upgradeFlop);
+  assert.equal(JSON.stringify(sessao.evolucao.vencedor_pote), vencedorAntes);
 });

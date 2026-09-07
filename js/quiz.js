@@ -1,6 +1,12 @@
-/** Contrato de pergunta, feedback e 1ª tentativa. Motor só em flop_hero / turn_hero. */
+/** Contrato de pergunta, feedback e 1ª tentativa. Motor em flop_hero / turn_hero + upgrades no pouso. */
 
-import { CATEGORIAS, avaliarMelhor5, conjuntoOpcoesMaoAtual } from './motor.js';
+import {
+  CATEGORIAS,
+  avaliarMelhor5,
+  conjuntoOpcoesMaoAtual,
+  conjuntoOpcoesUpgrade,
+  enumerarUpgrades,
+} from './motor.js';
 
 export const COPY = Object.freeze({
   linhaProposito: 'Treine ler as mãos. Sem apostas.',
@@ -9,6 +15,7 @@ export const COPY = Object.freeze({
   ctaContinuar: 'Continuar',
   ctaConfirmar: 'Confirmar',
   semUpgrade: 'Não há upgrade possível.',
+  linhaErroEnumeracao: 'Não foi possível continuar esta mão. Tente de novo.',
   enunciadoHero: 'Qual mão você tem agora?',
   enunciadoUpgrades: 'Quais mãos você ainda não tem, mas ainda pode formar?',
   enunciadoA: 'Qual mão o Adversário A completou?',
@@ -27,7 +34,9 @@ export const APELIDOS = Object.freeze({
 export const PASSOS = Object.freeze({
   flop_hero: 'flop_hero',
   flop_upgrade: 'flop_upgrade',
+  flop_skip: 'flop_skip',
   turn_hero: 'turn_hero',
+  turn_upgrade: 'turn_upgrade',
   turn_skip: 'turn_skip',
   river_hero: 'river_hero',
   river_a: 'river_a',
@@ -57,7 +66,6 @@ export const CATEGORIA_CORRETA_ID = 'flush';
 export const CATEGORIA_CORRETA_ROTULO = 'Flush';
 export const CATEGORIA_ADVERSARIO_ID = 'par';
 export const CATEGORIA_ADVERSARIO_ROTULO = 'Par';
-export const CONJUNTO_UPGRADE_STUB = Object.freeze(['flush']);
 
 export function idVencedorCorreto(indiceMaoSessao) {
   return indiceMaoSessao >= 2 ? 'voce_a' : 'voce';
@@ -68,8 +76,8 @@ export function rotuloVencedorCorreto(indiceMaoSessao) {
 }
 
 export function modoDoPasso(passo) {
-  if (passo === PASSOS.flop_upgrade) return 'multipla';
-  if (passo === PASSOS.turn_skip) return null;
+  if (passo === PASSOS.flop_upgrade || passo === PASSOS.turn_upgrade) return 'multipla';
+  if (passo === PASSOS.flop_skip || passo === PASSOS.turn_skip) return null;
   return 'unica';
 }
 
@@ -156,10 +164,11 @@ export function criarOpcoesCategoria(passo = PASSOS.flop_hero, rng = Math.random
   );
 }
 
-export function criarOpcoesUpgrade(rng = Math.random) {
-  const verdadeiras = new Set(CONJUNTO_UPGRADE_STUB);
+export function criarOpcoesUpgrade(conjunto, rng = Math.random) {
+  const verdadeiros = new Set(conjunto?.verdadeiros ?? []);
+  const ids = Array.isArray(conjunto?.ids) ? conjunto.ids : [];
   return shuffleOpcoes(
-    CATEGORIAS_STUB.map((item) => baseOpcao(item, 'categoria', verdadeiras.has(item.id))),
+    ids.map((id) => baseOpcao({ id, rotulo: rotuloCategoria(id) }, 'categoria', verdadeiros.has(id))),
     rng,
   );
 }
@@ -179,6 +188,7 @@ export function enunciadoDoPasso(passo) {
     case PASSOS.river_hero:
       return COPY.enunciadoHero;
     case PASSOS.flop_upgrade:
+    case PASSOS.turn_upgrade:
       return COPY.enunciadoUpgrades;
     case PASSOS.river_a:
       return COPY.enunciadoA;
@@ -189,6 +199,51 @@ export function enunciadoDoPasso(passo) {
     default:
       return null;
   }
+}
+
+export function prepararUpgradesStreet(sessao) {
+  if (!sessao?.mao || !Array.isArray(sessao.mao.cartasJogo)) {
+    if (sessao?.mao) {
+      sessao.mao.upgradesStreet = { ok: false, lista: null, conjunto: null, categoriaAtual: null, street: null };
+    }
+    return;
+  }
+
+  const passo = sessao.mao.passo;
+  const street = passo === PASSOS.turn_hero ? 'turn' : 'flop';
+  const holeHeroi = [4, 5].map((indice) => identidadeCarta(sessao.mao.cartasJogo[indice]));
+  const indicesBoard = street === 'turn' ? [6, 7, 8, 9] : [6, 7, 8];
+  const comunitarias = indicesBoard.map((indice) => identidadeCarta(sessao.mao.cartasJogo[indice]));
+  const resultado = enumerarUpgrades({ holeHeroi, comunitarias });
+
+  if (!resultado.ok) {
+    sessao.mao.upgradesStreet = {
+      ok: false,
+      lista: null,
+      conjunto: null,
+      categoriaAtual: null,
+      street,
+    };
+    return;
+  }
+
+  const lista = resultado.upgrades;
+  sessao.mao.upgradesStreet = {
+    ok: true,
+    lista,
+    conjunto: lista.length >= 1 ? conjuntoOpcoesUpgrade({ upgrades: lista }) : null,
+    categoriaAtual: resultado.categoriaAtual,
+    street,
+  };
+}
+
+export function decidirPosMaoAtual(sessao) {
+  const estado = sessao?.mao?.upgradesStreet;
+  if (!estado) return 'pendente';
+  if (estado.ok === false) return 'falha';
+  if (!Array.isArray(estado.lista)) return 'falha';
+  if (estado.lista.length === 0) return 'skip';
+  return 'pergunta';
 }
 
 function persistirPrimeira(sessao, deltas) {
@@ -256,10 +311,13 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
     return;
   }
 
-  if (passo === PASSOS.flop_upgrade) {
+  if (passo === PASSOS.flop_upgrade || passo === PASSOS.turn_upgrade) {
+    const conjunto = sessao.mao.upgradesStreet?.conjunto ?? conjuntoOpcoesUpgrade({
+      upgrades: sessao.mao.upgradesStreet?.lista ?? [],
+    });
     sessao.mao.corretaUnica = null;
-    sessao.mao.conjuntoCorreto = [...CONJUNTO_UPGRADE_STUB];
-    sessao.hud.opcoes = criarOpcoesUpgrade(rng);
+    sessao.mao.conjuntoCorreto = [...(conjunto.verdadeiros ?? [])];
+    sessao.hud.opcoes = criarOpcoesUpgrade(conjunto, rng);
     sessao.hud.cta = { nome: COPY.ctaConfirmar };
     return;
   }
@@ -270,6 +328,7 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
     sessao.mao.conjuntoCorreto = [];
     sessao.hud.opcoes = montagem.opcoes;
     sessao.hud.cta = null;
+    prepararUpgradesStreet(sessao);
     return;
   }
 

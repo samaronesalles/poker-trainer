@@ -22,6 +22,7 @@ import {
   avaliarUnica,
   alternarOpcao,
   confirmarMultipla,
+  decidirPosMaoAtual,
   modoDoPasso,
   rotuloVencedorCorreto,
 } from './quiz.js';
@@ -41,6 +42,7 @@ export const EVENTOS = Object.freeze({
   FIM_ANIMACAO_STREET: 'FIM_ANIMACAO_STREET',
   FALHA_DEAL: 'FALHA_DEAL',
   FALHA_MONTAGEM: 'FALHA_MONTAGEM',
+  FALHA_ENUMERACAO: 'FALHA_ENUMERACAO',
 });
 
 export function duracaoBeatMs(movimentoReduzido) {
@@ -188,6 +190,15 @@ function falhaMontagem(sessao) {
   sessao.hud.linhaErro = LINHA_ERRO_MONTAGEM;
 }
 
+function falhaEnumeracao(sessao) {
+  sessao.mao = null;
+  sessao.assentos = assentosVazios();
+  sessao.board = boardVazio();
+  sessao.pote = { modo: 'centro', vencedoresVisuais: [] };
+  sessao.hud = hudOciosa();
+  sessao.hud.linhaErro = COPY.linhaErroEnumeracao;
+}
+
 function tentarIniciar(sessao, payload) {
   if (sessao.montagemEmCurso && !payload?.aceitarMontagem) return;
   if (!payloadMontagemOk(payload)) return;
@@ -225,6 +236,12 @@ function preencherSlots(sessao, de, ate, visibilidade = 'face') {
 
 function abrirPergunta(sessao, passo) {
   apresentarPergunta(sessao, passo);
+  if (
+    (passo === PASSOS.flop_hero || passo === PASSOS.turn_hero) &&
+    decidirPosMaoAtual(sessao) === 'falha'
+  ) {
+    falhaEnumeracao(sessao);
+  }
 }
 
 function abrirSkip(sessao, passo) {
@@ -254,23 +271,48 @@ function abrirResultado(sessao) {
   };
 }
 
+function abrirStreetSeguinte(sessao, street) {
+  sessao.mao.street = street;
+  sessao.mao.passo = null;
+  sessao.mao.faseTentativa = null;
+  sessao.mao.cartasDaStreetPousadas = false;
+  if (street === 'river') {
+    sessao.mao.viradaShowdownConcluida = false;
+  }
+  sessao.board.burnVisivel = { papel: 'burn_cenico', visibilidade: 'verso' };
+  entrarDeal(sessao);
+}
+
+// Cadência 005: após a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
+function decidirAposMaoAtual(sessao, passoUpgrade, passoSkip) {
+  const decisao = decidirPosMaoAtual(sessao);
+  if (decisao === 'pergunta') {
+    abrirPergunta(sessao, passoUpgrade);
+    return;
+  }
+  if (decisao === 'skip') {
+    abrirSkip(sessao, passoSkip);
+    return;
+  }
+  falhaEnumeracao(sessao);
+}
+
 function avancarAcerto(sessao) {
   const { passo } = sessao.mao;
   if (passo === PASSOS.flop_hero) {
-    abrirPergunta(sessao, PASSOS.flop_upgrade);
+    decidirAposMaoAtual(sessao, PASSOS.flop_upgrade, PASSOS.flop_skip);
     return;
   }
   if (passo === PASSOS.flop_upgrade) {
-    sessao.mao.street = 'turn';
-    sessao.mao.passo = null;
-    sessao.mao.faseTentativa = null;
-    sessao.mao.cartasDaStreetPousadas = false;
-    sessao.board.burnVisivel = { papel: 'burn_cenico', visibilidade: 'verso' };
-    entrarDeal(sessao);
+    abrirStreetSeguinte(sessao, 'turn');
     return;
   }
   if (passo === PASSOS.turn_hero) {
-    abrirSkip(sessao, PASSOS.turn_skip);
+    decidirAposMaoAtual(sessao, PASSOS.turn_upgrade, PASSOS.turn_skip);
+    return;
+  }
+  if (passo === PASSOS.turn_upgrade) {
+    abrirStreetSeguinte(sessao, 'river');
     return;
   }
   if (passo === PASSOS.river_hero) {
@@ -334,14 +376,12 @@ function escolherOpcao(sessao, id) {
 
 function continuar(sessao) {
   if (sessao.hud.estado !== 'sem_upgrade' || !sessao.mao) return;
+  if (sessao.mao.passo === PASSOS.flop_skip) {
+    abrirStreetSeguinte(sessao, 'turn');
+    return;
+  }
   if (sessao.mao.passo === PASSOS.turn_skip) {
-    sessao.mao.street = 'river';
-    sessao.mao.passo = null;
-    sessao.mao.faseTentativa = null;
-    sessao.mao.cartasDaStreetPousadas = false;
-    sessao.mao.viradaShowdownConcluida = false;
-    sessao.board.burnVisivel = { papel: 'burn_cenico', visibilidade: 'verso' };
-    entrarDeal(sessao);
+    abrirStreetSeguinte(sessao, 'river');
   }
 }
 
@@ -386,6 +426,9 @@ export function aplicar(sessao, evento, payload = {}) {
       return sessao;
     case EVENTOS.FALHA_MONTAGEM:
       falhaMontagem(sessao);
+      return sessao;
+    case EVENTOS.FALHA_ENUMERACAO:
+      falhaEnumeracao(sessao);
       return sessao;
     default:
       return sessao;
@@ -737,6 +780,7 @@ async function ritualFlop() {
   });
   sentarBoardNoDom(1, 3);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'flop' });
+  if (sessao.hud.estado === 'ociosa') limparCartas();
   renderHud();
 }
 
@@ -875,8 +919,16 @@ function cancelarBeat() {
 function aposFimBeatVisual() {
   renderHud();
   atualizarPote();
+  if (sessao.hud.estado === 'ociosa') {
+    limparCartas();
+    return;
+  }
   if (sessao.hud.estado === 'deal' && sessao.mao?.street === 'turn') {
     void ritualTurnOuRiver('turn', 4);
+    return;
+  }
+  if (sessao.hud.estado === 'deal' && sessao.mao?.street === 'river') {
+    void ritualTurnOuRiver('river', 5);
   }
 }
 
@@ -923,6 +975,7 @@ function onCta(nome) {
     const passo = sessao.mao?.passo;
     aplicar(sessao, EVENTOS.CONTINUAR);
     renderHud();
+    if (passo === PASSOS.flop_skip) void ritualTurnOuRiver('turn', 4);
     if (passo === PASSOS.turn_skip) void ritualTurnOuRiver('river', 5);
   }
 }
