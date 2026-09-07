@@ -1,4 +1,4 @@
-/* Mesa de clube: feltro profundo, rail, holofote. Viewport de referùncia 1280ù720. */
+/* Mesa de clube: feltro profundo, rail, holofote. Viewport de refer?ncia 1280?720. */
 
 :root {
   --feltro: #0b3a28;
@@ -219,6 +219,15 @@ body {
   height: 64px;
 }
 
+.assento[data-vencedor='true'] .apelido {
+  color: #f3e6c4;
+  text-shadow: 0 0 12px rgba(232, 214, 160, 0.85);
+}
+
+.assento[data-vencedor='true'] .avatar {
+  box-shadow: 0 0 0 2px #e8d6a0, 0 0 16px rgba(232, 214, 160, 0.55);
+}
+
 .assento[data-seat='voce'] .apelido {
   font-size: 1.05rem;
 }
@@ -335,8 +344,16 @@ body {
   z-index: 2;
 }
 
-.pote[data-modo='para_vencedor'] {
+.pote[data-modo='para_vencedor'][data-para='voce'] {
   transform: translateX(-50%) translateY(210px);
+}
+
+.pote[data-modo='para_vencedor'][data-para='adversarioA'] {
+  transform: translateX(-50%) translate(-220px, -70px);
+}
+
+.pote[data-modo='para_vencedor'][data-para='adversarioB'] {
+  transform: translateX(-50%) translate(220px, -70px);
 }
 
 .pote[data-modo='split'] {
@@ -354,6 +371,10 @@ body {
 
 .pote[data-modo='split'] .pote-grupo[data-para='adversarioA'] {
   transform: translate(-160px, -70px);
+}
+
+.pote[data-modo='split'] .pote-grupo[data-para='adversarioB'] {
+  transform: translate(160px, -70px);
 }
 
 .pote-chip {

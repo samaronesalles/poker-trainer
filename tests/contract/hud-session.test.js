@@ -1,9 +1,12 @@
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
 import { cartasDeJogo, criarBaralhoPadrao, criarMisturaVisita, montarMao } from '../../js/baralho.js';
 import { aplicar, criarSessao, duracaoBeatMs, EVENTOS, LINHA_ERRO_MONTAGEM } from '../../js/mesa.js';
 import { COPY, PASSOS } from '../../js/quiz.js';
-import { criarStorage } from '../../js/storage.js';
+import { CHAVE_EVOLUCAO, criarStorage } from '../../js/storage.js';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
 
 function opcao(sessao, id) {
   return sessao.hud.opcoes.find((item) => item.id === id);
@@ -88,6 +91,61 @@ function payloadParFlop() {
   return { permutacao, cartasJogo: cartasDeJogo(permutacao) };
 }
 
+function payloadDeOnze(onze) {
+  const usadas = new Set(onze.map((item) => `${item.rank}-${item.naipe}`));
+  const resto = criarBaralhoPadrao().filter((item) => !usadas.has(`${item.rank}-${item.naipe}`));
+  const permutacao = [...onze, ...resto];
+  return { permutacao, cartasJogo: cartasDeJogo(permutacao) };
+}
+
+function payloadHeroiParAFlush() {
+  return payloadDeOnze([
+    { rank: '4', naipe: 'copas' },
+    { rank: '8', naipe: 'copas' },
+    { rank: '3', naipe: 'ouros' },
+    { rank: '6', naipe: 'espadas' },
+    { rank: '2', naipe: 'espadas' },
+    { rank: '2', naipe: 'paus' },
+    { rank: 'A', naipe: 'copas' },
+    { rank: 'K', naipe: 'copas' },
+    { rank: 'Q', naipe: 'copas' },
+    { rank: '7', naipe: 'ouros' },
+    { rank: '9', naipe: 'paus' },
+  ]);
+}
+
+function payloadEmpateVoceA() {
+  return payloadDeOnze([
+    { rank: 'A', naipe: 'ouros' },
+    { rank: '9', naipe: 'paus' },
+    { rank: '4', naipe: 'copas' },
+    { rank: '5', naipe: 'espadas' },
+    { rank: 'A', naipe: 'copas' },
+    { rank: '9', naipe: 'espadas' },
+    { rank: 'K', naipe: 'espadas' },
+    { rank: 'K', naipe: 'ouros' },
+    { rank: '7', naipe: 'copas' },
+    { rank: '3', naipe: 'paus' },
+    { rank: '2', naipe: 'ouros' },
+  ]);
+}
+
+function payloadRoyalBoard() {
+  return payloadDeOnze([
+    { rank: '4', naipe: 'copas' },
+    { rank: '5', naipe: 'ouros' },
+    { rank: '6', naipe: 'copas' },
+    { rank: '7', naipe: 'ouros' },
+    { rank: '2', naipe: 'copas' },
+    { rank: '3', naipe: 'ouros' },
+    { rank: 'A', naipe: 'espadas' },
+    { rank: 'K', naipe: 'espadas' },
+    { rank: 'Q', naipe: 'espadas' },
+    { rank: 'J', naipe: 'espadas' },
+    { rank: '10', naipe: 'espadas' },
+  ]);
+}
+
 function ate(sessao, alvo, payload = payloadMontagem()) {
   aplicar(sessao, EVENTOS.INICIAR_MAO, payload);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'holes' });
@@ -108,13 +166,13 @@ function ate(sessao, alvo, payload = payloadMontagem()) {
   if (alvo === 'river') return;
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
   if (alvo === 'river_hero') return;
-  acertarUnica(sessao, 'flush');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   if (alvo === 'river_a') return;
-  acertarUnica(sessao, 'par');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   if (alvo === 'river_b') return;
-  acertarUnica(sessao, 'par');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   if (alvo === 'river_vencedor') return;
-  acertarUnica(sessao, 'voce');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
 }
 
 test('1. estado inicial ociosa, CTA Nova mo, 0 opes e linha de propsito', () => {
@@ -279,17 +337,30 @@ test('8. turn_hero acertado em SF sem upgrade ? sem_upgrade + Continuar ? deal r
 
 test('9. river pousado sem virada permanece deal', () => {
   const sessao = criarSessao();
-  ate(sessao, 'river');
+  ate(sessao, 'river', payloadHeroiParAFlush());
   assert.equal(sessao.hud.estado, 'deal');
   assert.equal(sessao.mao.viradaShowdownConcluida, false);
   assert.equal(sessao.hud.opcoes.length, 0);
   const a = sessao.assentos.find((s) => s.id === 'adversarioA');
+  const b = sessao.assentos.find((s) => s.id === 'adversarioB');
   assert.equal(a.hole[0].visibilidade, 'verso');
+  assert.equal(b.hole[0].visibilidade, 'verso');
+  assert.equal(sessao.pote.modo, 'centro');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, []);
+  assert.ok(sessao.mao.showdown);
 });
 
-test('10. virada concluda ? perguntando river_hero apenas', () => {
+test('10. virada concluida -> perguntando river_hero; A e B face no mesmo evento', () => {
   const sessao = criarSessao();
-  ate(sessao, 'river_hero');
+  ate(sessao, 'river', payloadHeroiParAFlush());
+  const aAntes = sessao.assentos.find((s) => s.id === 'adversarioA').hole[0].visibilidade;
+  const bAntes = sessao.assentos.find((s) => s.id === 'adversarioB').hole[0].visibilidade;
+  assert.equal(aAntes, 'verso');
+  assert.equal(bAntes, 'verso');
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
+  const a = sessao.assentos.find((s) => s.id === 'adversarioA');
+  const b = sessao.assentos.find((s) => s.id === 'adversarioB');
+  const heroi = sessao.assentos.find((s) => s.id === 'voce');
   assert.equal(sessao.hud.estado, 'perguntando');
   assert.equal(sessao.mao.passo, PASSOS.river_hero);
   assert.equal(sessao.hud.enunciado, COPY.enunciadoHero);
@@ -297,41 +368,53 @@ test('10. virada concluda ? perguntando river_hero apenas', () => {
   assert.ok(sessao.hud.opcoes.every((o) => o.tipo === 'categoria'));
   assert.equal(sessao.mao.viradaShowdownConcluida, true);
   assert.equal(sessao.hud.cta, null);
+  assert.equal(a.hole[0].visibilidade, 'face');
+  assert.equal(a.hole[1].visibilidade, 'face');
+  assert.equal(b.hole[0].visibilidade, 'face');
+  assert.equal(b.hole[1].visibilidade, 'face');
+  assert.equal(heroi.hole[0].visibilidade, 'face');
+  assert.ok(sessao.board.slots.every((slot) => slot.carta?.visibilidade === 'face'));
+  assert.equal(sessao.pote.modo, 'centro');
+  assert.equal(sessao.mao.corretaUnica, 'par');
 });
 
-test('11. sequncia A ? B ? vencedor uma a uma', () => {
+test('11. sequencia A -> B -> vencedor uma a uma', () => {
   const sessao = criarSessao();
-  ate(sessao, 'river_a');
+  ate(sessao, 'river_a', payloadHeroiParAFlush());
   assert.equal(sessao.mao.passo, PASSOS.river_a);
   assert.equal(sessao.hud.enunciado, COPY.enunciadoA);
-  acertarUnica(sessao, 'par');
+  assert.equal(sessao.pote.modo, 'centro');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, []);
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   assert.equal(sessao.mao.passo, PASSOS.river_b);
   assert.equal(sessao.hud.enunciado, COPY.enunciadoB);
-  acertarUnica(sessao, 'par');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   assert.equal(sessao.mao.passo, PASSOS.river_vencedor);
   assert.equal(sessao.hud.enunciado, COPY.enunciadoPote);
   assert.ok(sessao.hud.opcoes.every((o) => o.tipo === 'vencedor'));
+  assert.equal(sessao.pote.modo, 'centro');
 });
 
-test('12. vencedor mo 1 voce ? resultado no-split + Prxima mo (Voc Flush)', () => {
+test('12. unico vencedor real (A) -> resultado para_vencedor, nao sempre voce', () => {
   const sessao = criarSessao();
-  ate(sessao, 'river_vencedor');
-  acertarUnica(sessao, 'voce');
+  ate(sessao, 'river_vencedor', payloadHeroiParAFlush());
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   assert.equal(sessao.hud.estado, 'resultado');
   assert.equal(sessao.hud.cta?.nome, COPY.ctaProximaMao);
   assert.equal(sessao.pote.modo, 'para_vencedor');
-  assert.deepEqual(sessao.pote.vencedoresVisuais, ['voce']);
-  assert.equal(sessao.hud.categoriasIdentificadas.voce, 'Flush');
-  assert.equal(sessao.hud.categoriasIdentificadas.adversarioA, 'Par');
-  assert.equal(sessao.hud.categoriasIdentificadas.adversarioB, 'Par');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, ['adversarioA']);
+  assert.equal(sessao.hud.categoriasIdentificadas.voce, 'Par');
+  assert.equal(sessao.hud.categoriasIdentificadas.adversarioA, 'Flush');
+  assert.equal(sessao.hud.categoriasIdentificadas.adversarioB, 'Carta alta');
 });
 
-test('13. segunda mo, vencedor voce_a ? resultado split', () => {
+test('13. segunda mao nao vira split so porque indiceMaoSessao >= 2', () => {
   const sessao = criarSessao();
-  ate(sessao, 'river_vencedor');
-  acertarUnica(sessao, 'voce');
-  aplicar(sessao, EVENTOS.PROXIMA_MAO, payloadMontagem());
+  ate(sessao, 'resultado', payloadHeroiParAFlush());
+  assert.equal(sessao.hud.estado, 'resultado');
+  aplicar(sessao, EVENTOS.PROXIMA_MAO, payloadHeroiParAFlush());
   assert.equal(sessao.hud.estado, 'deal');
+  assert.equal(sessao.pote.modo, 'centro');
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'holes' });
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'flop' });
   acertarHeroStreet(sessao);
@@ -341,15 +424,16 @@ test('13. segunda mo, vencedor voce_a ? resultado split', () => {
   concluirPosMaoAtual(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'river' });
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
-  acertarUnica(sessao, 'flush');
-  acertarUnica(sessao, 'par');
-  acertarUnica(sessao, 'par');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
+  acertarUnica(sessao, sessao.mao.corretaUnica);
+  acertarUnica(sessao, sessao.mao.corretaUnica);
   const correta = sessao.hud.opcoes.find((o) => o.correta);
-  assert.equal(correta.id, 'voce_a');
-  acertarUnica(sessao, 'voce_a');
+  assert.equal(correta.id, 'adversarioA');
+  assert.notEqual(correta.id, 'voce_a');
+  acertarUnica(sessao, correta.id);
   assert.equal(sessao.hud.estado, 'resultado');
-  assert.equal(sessao.pote.modo, 'split');
-  assert.deepEqual(sessao.pote.vencedoresVisuais, ['voce', 'adversarioA']);
+  assert.equal(sessao.pote.modo, 'para_vencedor');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, ['adversarioA']);
 });
 
 test('14. FALHA_DEAL ? ociosa + Nova mo', () => {
@@ -490,7 +574,7 @@ test('sesso no tem CTA zerar nem campos de relatrio; CTAs permitidos', () => 
   assert.ok(permitidos.has(skip.hud.cta.nome));
   const fim = criarSessao();
   ate(fim, 'river_vencedor', payloadFabrica());
-  acertarUnica(fim, 'voce');
+  acertarUnica(fim, fim.mao.corretaUnica);
   assert.ok(permitidos.has(fim.hud.cta.nome));
   assert.equal(fim.hud.cta.nome, COPY.ctaProximaMao);
 });
@@ -567,3 +651,119 @@ test('flop e turn no-skip: duas 1s Confirmar em upgrade; 0 toque em mao_atual 
   assert.notEqual(JSON.stringify(sessao.evolucao.upgrade), upgradeFlop);
   assert.equal(JSON.stringify(sessao.evolucao.vencedor_pote), vencedorAntes);
 });
+
+const raizHud = dirname(fileURLToPath(import.meta.url));
+const fonteMesa = readFileSync(join(raizHud, '../../js/mesa.js'), 'utf8');
+const fonteIndex = readFileSync(join(raizHud, '../../index.html'), 'utf8');
+
+test('split heroi vs A: modo split, texto empate, Prxima mo', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'resultado', payloadEmpateVoceA());
+  assert.equal(sessao.hud.estado, 'resultado');
+  assert.equal(sessao.pote.modo, 'split');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, ['voce', 'adversarioA']);
+  assert.equal(sessao.hud.cta?.nome, COPY.ctaProximaMao);
+});
+
+test('tres: tres assentos destacados; 0 classe de escurecer perdedor', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'resultado', payloadRoyalBoard());
+  assert.equal(sessao.pote.modo, 'split');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, ['voce', 'adversarioA', 'adversarioB']);
+  assert.equal(fonteMesa.includes('opacity'), false);
+  assert.equal(/escurec|dimmed|perdedor/.test(fonteMesa), false);
+  assert.ok(fonteIndex.includes("data-para=\"adversarioB\"") || fonteIndex.includes("data-para='adversarioB'"));
+});
+
+test('showdown.ok false apos virada -> ociosa + Nova mo; 0 perguntando', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'river', payloadHeroiParAFlush());
+  sessao.mao.cartasJogo[10] = { ...sessao.mao.cartasJogo[0] };
+  sessao.mao.showdown = { ok: false, maos: null, vencedorId: null, vencedores: [], conjuntoPote: null };
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
+  assert.equal(sessao.hud.estado, 'ociosa');
+  assert.equal(sessao.hud.cta?.nome, COPY.ctaNovaMao);
+  assert.notEqual(sessao.hud.estado, 'perguntando');
+  assert.equal(sessao.mao, null);
+});
+
+test('pendente apos virada permanece deal', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'river', payloadHeroiParAFlush());
+  delete sessao.mao.showdown;
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
+  assert.equal(sessao.hud.estado, 'deal');
+  assert.equal(sessao.mao.viradaShowdownConcluida, true);
+});
+
+test('Proxima mo com pote split devolve centro e novo deal', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'resultado', payloadEmpateVoceA());
+  assert.equal(sessao.pote.modo, 'split');
+  aplicar(sessao, EVENTOS.PROXIMA_MAO, payloadHeroiParAFlush());
+  assert.equal(sessao.hud.estado, 'deal');
+  assert.equal(sessao.pote.modo, 'centro');
+  assert.deepEqual(sessao.pote.vencedoresVisuais, []);
+  assert.equal(sessao.hud.cta, null);
+});
+
+test('acerto river_hero vai a river_a; 0 upgrade no river', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'river_hero', payloadHeroiParAFlush());
+  acertarUnica(sessao, sessao.mao.corretaUnica);
+  assert.equal(sessao.mao.passo, PASSOS.river_a);
+  assert.notEqual(sessao.mao.passo, PASSOS.flop_upgrade);
+  assert.notEqual(sessao.mao.passo, PASSOS.turn_upgrade);
+  assert.equal(fonteMesa.includes('river_upgrade'), false);
+});
+
+test('reload no showdown aborta a mo e preserva contadores; blob s 3 buckets', () => {
+  const { map, api } = memoria();
+  const storage = criarStorage({ api });
+  const sessao = criarSessao({ storage });
+  ate(sessao, 'river_a', payloadHeroiParAFlush());
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: sessao.hud.opcoes.find((o) => !o.verdadeira).id });
+  assert.equal(sessao.evolucao.mao_atual.flush.erros, 1);
+  const deNovo = criarSessao({ storage });
+  assert.equal(deNovo.hud.estado, 'ociosa');
+  assert.equal(deNovo.mao, null);
+  assert.equal(deNovo.evolucao.mao_atual.flush.erros, 1);
+  const blob = JSON.parse(map.get(CHAVE_EVOLUCAO));
+  assert.deepEqual(Object.keys(blob).sort(), ['mao_atual', 'upgrade', 'vencedor_pote']);
+  const json = JSON.stringify(blob);
+  assert.equal(/chaveDesempate/.test(json), false);
+  assert.equal(/Melhor5/.test(json), false);
+  assert.equal(/cartasJogo/.test(json), false);
+});
+
+test('fail-open de storage deixa as quatro perguntas e o resultado seguirem', () => {
+  const sessao = criarSessao({ storage: criarStorage({ indisponivel: true }) });
+  assert.doesNotThrow(() => {
+    ate(sessao, 'resultado', payloadHeroiParAFlush());
+  });
+  assert.equal(sessao.hud.estado, 'resultado');
+  assert.equal(sessao.hud.cta?.nome, COPY.ctaProximaMao);
+});
+
+test('mesa.js no importa motor.js nem chama localStorage; foca primeiro habilitado', () => {
+  assert.equal(fonteMesa.includes("from './motor.js'"), false);
+  assert.equal(/localStorage\s*[.([]/.test(fonteMesa), false);
+  assert.ok(fonteMesa.includes('focarPrimeiroHabilitado'));
+  assert.ok(fonteMesa.includes('prepararShowdown'));
+  assert.equal(/Embaralhar/.test(fonteMesa), false);
+});
+
+test('categoriasIdentificadas s no resultado; 0 rtulo nas cartas', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'river_vencedor', payloadHeroiParAFlush());
+  assert.equal(sessao.hud.categoriasIdentificadas.voce, null);
+  assert.equal(sessao.pote.modo, 'centro');
+  acertarUnica(sessao, sessao.mao.corretaUnica);
+  const c = sessao.hud.categoriasIdentificadas;
+  assert.equal(c.voce, 'Par');
+  assert.equal(c.adversarioA, 'Flush');
+  assert.equal(c.adversarioB, 'Carta alta');
+  assert.equal(JSON.stringify(sessao.hud).includes('chaveDesempate'), false);
+  assert.equal(fonteMesa.includes('melhor 5'), false);
+});
+

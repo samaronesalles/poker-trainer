@@ -14,22 +14,23 @@ import {
 import { aplicarVisibilidade, criarBurnCenico, criarElementoCarta } from './carta.js';
 import {
   APELIDOS,
-  CATEGORIA_ADVERSARIO_ROTULO,
-  CATEGORIA_CORRETA_ROTULO,
   COPY,
   PASSOS,
   apresentarPergunta,
   avaliarUnica,
   alternarOpcao,
   confirmarMultipla,
+  decidirAposShowdown,
   decidirPosMaoAtual,
   modoDoPasso,
-  rotuloVencedorCorreto,
+  prepararShowdown,
+  rotuloVencedor,
 } from './quiz.js';
 import { criarStorage } from './storage.js';
 
 export const LINHA_ERRO_MONTAGEM = 'No foi possvel embaralhar. Tente de novo.';
 export const BEAT_ACERTO_MS = 400;
+export const TETO_SHOWDOWN_EXTRA_MS = 1000;
 
 export const EVENTOS = Object.freeze({
   INICIAR_MAO: 'INICIAR_MAO',
@@ -254,20 +255,22 @@ function abrirSkip(sessao, passo) {
 }
 
 function abrirResultado(sessao) {
-  const split = sessao.indiceMaoSessao >= 2;
+  const showdown = sessao.mao.showdown;
+  const vencedores = [...(showdown?.vencedores ?? [])];
+  const split = vencedores.length >= 2;
   sessao.hud.estado = 'resultado';
   sessao.hud.enunciado = null;
   sessao.hud.opcoes = [];
   sessao.hud.cta = { nome: COPY.ctaProximaMao };
   sessao.hud.feedback = 'acerto';
   sessao.hud.categoriasIdentificadas = {
-    voce: CATEGORIA_CORRETA_ROTULO,
-    adversarioA: CATEGORIA_ADVERSARIO_ROTULO,
-    adversarioB: CATEGORIA_ADVERSARIO_ROTULO,
+    voce: showdown?.maos?.voce?.rotulo ?? null,
+    adversarioA: showdown?.maos?.adversarioA?.rotulo ?? null,
+    adversarioB: showdown?.maos?.adversarioB?.rotulo ?? null,
   };
   sessao.pote = {
     modo: split ? 'split' : 'para_vencedor',
-    vencedoresVisuais: split ? ['voce', 'adversarioA'] : ['voce'],
+    vencedoresVisuais: vencedores,
   };
 }
 
@@ -283,7 +286,7 @@ function abrirStreetSeguinte(sessao, street) {
   entrarDeal(sessao);
 }
 
-// Cadência 005: após a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
+// Cadncia 005: aps a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
 function decidirAposMaoAtual(sessao, passoUpgrade, passoSkip) {
   const decisao = decidirPosMaoAtual(sessao);
   if (decisao === 'pergunta') {
@@ -356,6 +359,7 @@ function fimAnimacao(sessao, etapa) {
     preencherSlots(sessao, 5, 5);
     sessao.mao.cartasDaStreetPousadas = true;
     sessao.mao.viradaShowdownConcluida = false;
+    prepararShowdown(sessao);
     return;
   }
   if (etapa === 'showdown') {
@@ -366,6 +370,14 @@ function fimAnimacao(sessao, etapa) {
       }
     }
     sessao.mao.viradaShowdownConcluida = true;
+    const decisao = decidirAposShowdown(sessao);
+    if (decisao === 'falha') {
+      falhaEnumeracao(sessao);
+      return;
+    }
+    if (decisao === 'pendente') {
+      return;
+    }
     abrirPergunta(sessao, PASSOS.river_hero);
   }
 }
@@ -576,18 +588,40 @@ async function mostrarBurn(ms) {
 function atualizarPote() {
   const pote = $('[data-pote]');
   if (!pote) return;
-  pote.dataset.modo = sessao.pote.modo;
+  const modo = sessao.pote.modo;
+  const vencedores = sessao.pote.vencedoresVisuais ?? [];
+  pote.dataset.modo = modo;
+  if (modo === 'para_vencedor' && vencedores[0]) {
+    pote.dataset.para = vencedores[0];
+  } else {
+    pote.removeAttribute('data-para');
+  }
+
   const comum = pote.querySelector('[data-para="comum"]');
-  const voce = pote.querySelector('[data-para="voce"]');
-  const a = pote.querySelector('[data-para="adversarioA"]');
-  if (sessao.pote.modo === 'split') {
+  const grupos = {
+    voce: pote.querySelector('.pote-grupo[data-para="voce"]'),
+    adversarioA: pote.querySelector('.pote-grupo[data-para="adversarioA"]'),
+    adversarioB: pote.querySelector('.pote-grupo[data-para="adversarioB"]'),
+  };
+
+  if (modo === 'split') {
     if (comum) comum.hidden = true;
-    if (voce) voce.hidden = false;
-    if (a) a.hidden = false;
+    for (const id of ['voce', 'adversarioA', 'adversarioB']) {
+      if (grupos[id]) grupos[id].hidden = !vencedores.includes(id);
+    }
   } else {
     if (comum) comum.hidden = false;
-    if (voce) voce.hidden = true;
-    if (a) a.hidden = true;
+    for (const id of ['voce', 'adversarioA', 'adversarioB']) {
+      if (grupos[id]) grupos[id].hidden = true;
+    }
+  }
+
+  for (const el of $all('.assento')) {
+    if (sessao.hud.estado === 'resultado' && vencedores.includes(el.dataset.seat)) {
+      el.dataset.vencedor = 'true';
+    } else {
+      delete el.dataset.vencedor;
+    }
   }
 }
 
@@ -648,13 +682,23 @@ function renderHud() {
     const bloco = document.createElement('div');
     bloco.className = 'hud__resultado';
     const venceu = document.createElement('p');
-    venceu.textContent =
-      sessao.pote.modo === 'split'
-        ? `${rotuloVencedorCorreto(sessao.indiceMaoSessao)} dividem o pote.`
-        : `${rotuloVencedorCorreto(sessao.indiceMaoSessao)} levou o pote.`;
+    venceu.className = 'hud__resultado-pote';
+    const rotulo = rotuloVencedor(sessao.mao?.showdown?.vencedorId);
+    const split = (sessao.pote.vencedoresVisuais?.length ?? 0) >= 2;
+    venceu.textContent = split ? `${rotulo} dividem o pote.` : `${rotulo} levou o pote.`;
     const cats = document.createElement('p');
+    cats.className = 'hud__resultado-cats';
     const c = sessao.hud.categoriasIdentificadas;
-    cats.textContent = `${APELIDOS.voce}: ${c.voce}  ${APELIDOS.adversarioA}: ${c.adversarioA}  ${APELIDOS.adversarioB}: ${c.adversarioB}`;
+    const ordem = [
+      [APELIDOS.voce, c.voce],
+      [APELIDOS.adversarioA, c.adversarioA],
+      [APELIDOS.adversarioB, c.adversarioB],
+    ];
+    for (const [apelido, rotuloCat] of ordem) {
+      const item = document.createElement('span');
+      item.textContent = `${apelido}: ${rotuloCat}`;
+      cats.append(item);
+    }
     bloco.append(venceu, cats);
     hud.append(bloco, acoesCta(COPY.ctaProximaMao));
     focarPrimeiroHabilitado(hud);
@@ -812,6 +856,17 @@ async function ritualTurnOuRiver(etapa, slot) {
   if (etapa === 'river') {
     aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'river' });
     aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
+    if (sessao.hud.estado === 'deal' && sessao.mao) {
+      const extra = sessao.movimentoReduzido ? 0 : TETO_SHOWDOWN_EXTRA_MS;
+      if (extra > 0) await esperar(extra);
+      if (sessao.hud.estado === 'deal' && sessao.mao) {
+        prepararShowdown(sessao);
+        aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'showdown' });
+        if (sessao.hud.estado === 'deal') {
+          aplicar(sessao, EVENTOS.FALHA_ENUMERACAO);
+        }
+      }
+    }
   } else {
     aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
   }

@@ -43,11 +43,28 @@
 .hud__resultado {
   margin: 0 0 0.7rem;
   display: grid;
-  gap: 0.25rem;
+  gap: 0.45rem;
 }
 
 .hud__resultado p {
   margin: 0;
+}
+
+.hud__resultado-pote {
+  font-weight: 800;
+  font-size: 1.08rem;
+  letter-spacing: 0.01em;
+}
+
+.hud__resultado-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.15rem;
+  font-size: 0.95rem;
+}
+
+.hud__resultado-cats span {
+  opacity: 1;
 }
 
 .hud__acoes {

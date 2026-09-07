@@ -1,11 +1,14 @@
-/** Contrato de pergunta, feedback e 1ª tentativa. Motor em flop_hero / turn_hero + upgrades no pouso. */
+/** Contrato de pergunta, feedback e 1ª tentativa. Motor em flop/turn + upgrades no pouso + showdown no river. */
 
 import {
   CATEGORIAS,
+  UNIVERSO_POTE,
   avaliarMelhor5,
   conjuntoOpcoesMaoAtual,
   conjuntoOpcoesUpgrade,
+  conjuntoOpcoesVencedor,
   enumerarUpgrades,
+  quemGanhou,
 } from './motor.js';
 
 export const COPY = Object.freeze({
@@ -44,35 +47,20 @@ export const PASSOS = Object.freeze({
   river_vencedor: 'river_vencedor',
 });
 
-export const CATEGORIAS_STUB = Object.freeze([
-  Object.freeze({ id: 'par', rotulo: 'Par' }),
-  Object.freeze({ id: 'carta_alta', rotulo: 'Carta alta' }),
-  Object.freeze({ id: 'dois_pares', rotulo: 'Dois pares' }),
-  Object.freeze({ id: 'trinca', rotulo: 'Trinca' }),
-  Object.freeze({ id: 'flush', rotulo: 'Flush' }),
-  Object.freeze({ id: 'straight', rotulo: 'Straight' }),
-]);
+const INDICES_HOLE_RIVER = Object.freeze({
+  voce: Object.freeze([4, 5]),
+  adversarioA: Object.freeze([0, 1]),
+  adversarioB: Object.freeze([2, 3]),
+});
 
-export const VENCEDORES_STUB = Object.freeze([
-  Object.freeze({ id: 'voce', rotulo: 'Você' }),
-  Object.freeze({ id: 'adversarioA', rotulo: 'Adversário A' }),
-  Object.freeze({ id: 'adversarioB', rotulo: 'Adversário B' }),
-  Object.freeze({ id: 'voce_a', rotulo: 'Você e Adversário A' }),
-  Object.freeze({ id: 'voce_b', rotulo: 'Você e Adversário B' }),
-  Object.freeze({ id: 'a_b', rotulo: 'Adversário A e Adversário B' }),
-]);
+const ASSENTO_DO_PASSO_RIVER = Object.freeze({
+  [PASSOS.river_hero]: 'voce',
+  [PASSOS.river_a]: 'adversarioA',
+  [PASSOS.river_b]: 'adversarioB',
+});
 
-export const CATEGORIA_CORRETA_ID = 'flush';
-export const CATEGORIA_CORRETA_ROTULO = 'Flush';
-export const CATEGORIA_ADVERSARIO_ID = 'par';
-export const CATEGORIA_ADVERSARIO_ROTULO = 'Par';
-
-export function idVencedorCorreto(indiceMaoSessao) {
-  return indiceMaoSessao >= 2 ? 'voce_a' : 'voce';
-}
-
-export function rotuloVencedorCorreto(indiceMaoSessao) {
-  return indiceMaoSessao >= 2 ? 'Você e Adversário A' : 'Você';
+export function rotuloVencedor(vencedorId) {
+  return UNIVERSO_POTE.find((item) => item.id === vencedorId)?.rotulo ?? '';
 }
 
 export function modoDoPasso(passo) {
@@ -151,17 +139,101 @@ function criarOpcoesMaoAtual(cartasJogo, passo, rng) {
   };
 }
 
-function idCategoriaCorreta(passo) {
-  if (passo === PASSOS.river_a || passo === PASSOS.river_b) return CATEGORIA_ADVERSARIO_ID;
-  return CATEGORIA_CORRETA_ID;
+function comunitariasRiver(cartasJogo) {
+  return [6, 7, 8, 9, 10].map((indice) => identidadeCarta(cartasJogo[indice]));
 }
 
-export function criarOpcoesCategoria(passo = PASSOS.flop_hero, rng = Math.random) {
-  const corretaId = idCategoriaCorreta(passo);
-  return shuffleOpcoes(
-    CATEGORIAS_STUB.map((item) => baseOpcao(item, 'categoria', item.id === corretaId)),
-    rng,
-  );
+function holeDoAssento(cartasJogo, assento) {
+  return INDICES_HOLE_RIVER[assento].map((indice) => identidadeCarta(cartasJogo[indice]));
+}
+
+function melhorDoRiver(sessao, assento) {
+  const pronta = sessao.mao.showdown?.ok === true ? sessao.mao.showdown.maos?.[assento] : null;
+  if (pronta?.categoriaId) return pronta;
+  const cartas = sessao.mao.cartasJogo;
+  return avaliarMelhor5([...holeDoAssento(cartas, assento), ...comunitariasRiver(cartas)]);
+}
+
+function criarOpcoesCategoriaRiver(sessao, passo, rng) {
+  const assento = ASSENTO_DO_PASSO_RIVER[passo];
+  const melhor = melhorDoRiver(sessao, assento);
+  const board = comunitariasRiver(sessao.mao.cartasJogo);
+  const ids = conjuntoOpcoesMaoAtual({ categoriaId: melhor.categoriaId, board });
+  return {
+    melhor,
+    opcoes: shuffleOpcoes(
+      ids.map((id) =>
+        baseOpcao({ id, rotulo: rotuloCategoria(id) }, 'categoria', id === melhor.categoriaId),
+      ),
+      rng,
+    ),
+  };
+}
+
+function criarOpcoesPote(sessao, rng) {
+  const showdown = sessao.mao.showdown;
+  if (showdown?.ok !== true || !showdown.vencedorId) {
+    return { vencedorId: null, opcoes: [] };
+  }
+  const ids = showdown.conjuntoPote ?? conjuntoOpcoesVencedor(showdown.vencedorId);
+  return {
+    vencedorId: showdown.vencedorId,
+    opcoes: shuffleOpcoes(
+      ids.map((id) =>
+        baseOpcao({ id, rotulo: rotuloVencedor(id) }, 'vencedor', id === showdown.vencedorId),
+      ),
+      rng,
+    ),
+  };
+}
+
+export function prepararShowdown(sessao) {
+  if (!sessao?.mao) return;
+  const cartas = sessao.mao.cartasJogo;
+  if (!Array.isArray(cartas) || cartas.length < 11) {
+    sessao.mao.showdown = {
+      ok: false,
+      maos: null,
+      vencedorId: null,
+      vencedores: [],
+      conjuntoPote: null,
+    };
+    return;
+  }
+
+  const resultado = quemGanhou({
+    holeA: holeDoAssento(cartas, 'adversarioA'),
+    holeB: holeDoAssento(cartas, 'adversarioB'),
+    holeVoce: holeDoAssento(cartas, 'voce'),
+    comunitarias: comunitariasRiver(cartas),
+  });
+
+  if (!resultado.ok) {
+    sessao.mao.showdown = {
+      ok: false,
+      maos: null,
+      vencedorId: null,
+      vencedores: [],
+      conjuntoPote: null,
+    };
+    return;
+  }
+
+  sessao.mao.showdown = {
+    ok: true,
+    maos: resultado.maos,
+    vencedorId: resultado.vencedorId,
+    vencedores: resultado.vencedores,
+    conjuntoPote: conjuntoOpcoesVencedor(resultado.vencedorId),
+  };
+}
+
+export function decidirAposShowdown(sessao) {
+  const estado = sessao?.mao?.showdown;
+  if (!estado) return 'pendente';
+  if (estado.ok === true) return 'pergunta';
+  if (estado.ok === false) return 'falha';
+  return 'pendente';
 }
 
 export function criarOpcoesUpgrade(conjunto, rng = Math.random) {
@@ -169,14 +241,6 @@ export function criarOpcoesUpgrade(conjunto, rng = Math.random) {
   const ids = Array.isArray(conjunto?.ids) ? conjunto.ids : [];
   return shuffleOpcoes(
     ids.map((id) => baseOpcao({ id, rotulo: rotuloCategoria(id) }, 'categoria', verdadeiros.has(id))),
-    rng,
-  );
-}
-
-export function criarOpcoesVencedor(indiceMaoSessao, rng = Math.random) {
-  const corretaId = idVencedorCorreto(indiceMaoSessao);
-  return shuffleOpcoes(
-    VENCEDORES_STUB.map((item) => baseOpcao(item, 'vencedor', item.id === corretaId)),
     rng,
   );
 }
@@ -304,9 +368,10 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
   limparFeedback(sessao);
 
   if (passo === PASSOS.river_vencedor) {
-    sessao.mao.corretaUnica = idVencedorCorreto(sessao.indiceMaoSessao);
+    const montagem = criarOpcoesPote(sessao, rng);
+    sessao.mao.corretaUnica = montagem.vencedorId;
     sessao.mao.conjuntoCorreto = [];
-    sessao.hud.opcoes = criarOpcoesVencedor(sessao.indiceMaoSessao, rng);
+    sessao.hud.opcoes = montagem.opcoes;
     sessao.hud.cta = null;
     return;
   }
@@ -332,10 +397,13 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
     return;
   }
 
-  sessao.mao.corretaUnica = idCategoriaCorreta(passo);
-  sessao.mao.conjuntoCorreto = [];
-  sessao.hud.opcoes = criarOpcoesCategoria(passo, rng);
-  sessao.hud.cta = null;
+  if (passo === PASSOS.river_hero || passo === PASSOS.river_a || passo === PASSOS.river_b) {
+    const montagem = criarOpcoesCategoriaRiver(sessao, passo, rng);
+    sessao.mao.corretaUnica = montagem.melhor.categoriaId;
+    sessao.mao.conjuntoCorreto = [];
+    sessao.hud.opcoes = montagem.opcoes;
+    sessao.hud.cta = null;
+  }
 }
 
 function deltasUnica(sessao, acerto) {

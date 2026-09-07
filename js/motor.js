@@ -1,6 +1,6 @@
 /**
- * Motor de avaliação: melhor 5 + RN-017 + enumerador de upgrades; sem quemGanhou.
- * MUST NOT persistir Melhor5, kickers, cartas, runouts, snapshot ou chaveDesempate.
+ * Motor de avaliação: melhor 5 + RN-017 + enumerador de upgrades + quemGanhou.
+ * MUST NOT persistir Melhor5, kickers, cartas, runouts, snapshot, chaveDesempate ou dump de quemGanhou.
  */
 
 import { NAIPES, RANKS } from './baralho.js';
@@ -417,4 +417,89 @@ export function conjuntoOpcoesUpgrade({ upgrades } = {}) {
     ids.push(item.id);
   }
   return { ids, verdadeiros };
+}
+
+export const UNIVERSO_POTE = Object.freeze([
+  Object.freeze({ id: 'voce', rotulo: 'Você' }),
+  Object.freeze({ id: 'adversarioA', rotulo: 'Adversário A' }),
+  Object.freeze({ id: 'adversarioB', rotulo: 'Adversário B' }),
+  Object.freeze({ id: 'voce_a', rotulo: 'Você e Adversário A' }),
+  Object.freeze({ id: 'voce_b', rotulo: 'Você e Adversário B' }),
+  Object.freeze({ id: 'a_b', rotulo: 'Adversário A e Adversário B' }),
+  Object.freeze({ id: 'tres', rotulo: 'Os três empatam' }),
+]);
+
+const ASSENTOS_ORDEM = Object.freeze(['voce', 'adversarioA', 'adversarioB']);
+
+const VENCEDOR_POR_ASSENTOS = Object.freeze({
+  voce: 'voce',
+  adversarioA: 'adversarioA',
+  adversarioB: 'adversarioB',
+  'voce,adversarioA': 'voce_a',
+  'voce,adversarioB': 'voce_b',
+  'adversarioA,adversarioB': 'a_b',
+  'voce,adversarioA,adversarioB': 'tres',
+});
+
+function cartaDoAlfabeto(carta) {
+  return Boolean(carta && RANKS.includes(carta.rank) && NAIPES.includes(carta.naipe));
+}
+
+function aridadeExata(cartas, n) {
+  return Array.isArray(cartas) && cartas.length === n;
+}
+
+export function quemGanhou({ holeVoce, holeA, holeB, comunitarias } = {}) {
+  try {
+    if (
+      !aridadeExata(holeVoce, 2) ||
+      !aridadeExata(holeA, 2) ||
+      !aridadeExata(holeB, 2) ||
+      !aridadeExata(comunitarias, 5)
+    ) {
+      return { ok: false };
+    }
+
+    const onze = [...holeVoce, ...holeA, ...holeB, ...comunitarias];
+    if (onze.some((carta) => !cartaDoAlfabeto(carta))) return { ok: false };
+    const identidades = onze.map((carta) => `${carta.rank}-${carta.naipe}`);
+    if (new Set(identidades).size !== 11) return { ok: false };
+
+    const maos = {
+      voce: avaliarMelhor5([...holeVoce, ...comunitarias]),
+      adversarioA: avaliarMelhor5([...holeA, ...comunitarias]),
+      adversarioB: avaliarMelhor5([...holeB, ...comunitarias]),
+    };
+
+    let maxChave = maos.voce.chaveDesempate;
+    for (const assento of ASSENTOS_ORDEM) {
+      if (compararChave(maos[assento].chaveDesempate, maxChave) > 0) {
+        maxChave = maos[assento].chaveDesempate;
+      }
+    }
+
+    const vencedores = ASSENTOS_ORDEM.filter(
+      (assento) => compararChave(maos[assento].chaveDesempate, maxChave) === 0,
+    );
+    const vencedorId = VENCEDOR_POR_ASSENTOS[vencedores.join(',')];
+    if (!vencedorId) return { ok: false };
+
+    return { ok: true, maos, vencedorId, vencedores };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export function conjuntoOpcoesVencedor(vencedorId) {
+  const idsUniverso = UNIVERSO_POTE.map((item) => item.id);
+  if (!idsUniverso.includes(vencedorId)) return [];
+  const ids = [vencedorId];
+  const visto = new Set(ids);
+  for (const item of UNIVERSO_POTE) {
+    if (ids.length >= 6) break;
+    if (visto.has(item.id)) continue;
+    visto.add(item.id);
+    ids.push(item.id);
+  }
+  return ids;
 }

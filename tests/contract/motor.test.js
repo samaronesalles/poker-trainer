@@ -6,10 +6,13 @@ import { fileURLToPath } from 'node:url';
 import {
   CATEGORIAS,
   SEQUENCIAS_LEGAIS,
+  UNIVERSO_POTE,
   avaliarMelhor5,
   conjuntoOpcoesMaoAtual,
   conjuntoOpcoesUpgrade,
+  conjuntoOpcoesVencedor,
   enumerarUpgrades,
+  quemGanhou,
   snapshotDesconhecido,
 } from '../../js/motor.js';
 
@@ -281,7 +284,8 @@ test('motor.js não importa quiz/mesa/storage nem persiste', () => {
   assert.equal(fonteMotor.includes('sendBeacon'), false);
   assert.ok(fonteMotor.includes('melhor 5 + RN-017'));
   assert.ok(fonteMotor.includes('enumerador de upgrades'));
-  assert.ok(fonteMotor.includes('sem quemGanhou'));
+  assert.ok(fonteMotor.includes('quemGanhou'));
+  assert.equal(fonteMotor.includes('sem quemGanhou'), false);
   assert.equal(fonteMotor.includes('embaralhar'), false);
   assert.equal(fonteMotor.includes('Worker'), false);
   assert.equal(/U\+1F0/.test(fonteMotor), false);
@@ -530,5 +534,405 @@ test('§6.16 pote hipotético não é entrada: holes adversárias não são conh
   const resultado = enumerar(hole, board);
   assert.equal(resultado.ok, true);
   assert.equal(fonteMotor.includes('quemGanhou'), true);
-  assert.ok(fonteMotor.includes('sem quemGanhou'));
+  assert.equal(fonteMotor.includes('sem quemGanhou'), false);
+});
+
+function showdownDe(holeVoce, holeA, holeB, comunitarias) {
+  return quemGanhou({ holeVoce, holeA, holeB, comunitarias });
+}
+
+const FIXTURE_KICKER_VOCE = {
+  holeVoce: [c('A', 'copas'), c('9', 'espadas')],
+  holeA: [c('Q', 'ouros'), c('9', 'paus')],
+  holeB: [c('4', 'copas'), c('5', 'espadas')],
+  comunitarias: [
+    c('K', 'espadas'),
+    c('K', 'ouros'),
+    c('7', 'copas'),
+    c('3', 'paus'),
+    c('2', 'ouros'),
+  ],
+};
+
+const FIXTURE_EMPATE_VOCE_A = {
+  holeVoce: [c('A', 'copas'), c('9', 'espadas')],
+  holeA: [c('A', 'ouros'), c('9', 'paus')],
+  holeB: [c('4', 'copas'), c('5', 'espadas')],
+  comunitarias: [
+    c('K', 'espadas'),
+    c('K', 'ouros'),
+    c('7', 'copas'),
+    c('3', 'paus'),
+    c('2', 'ouros'),
+  ],
+};
+
+const FIXTURE_EMPATE_VOCE_B = {
+  holeVoce: [c('A', 'copas'), c('9', 'espadas')],
+  holeA: [c('4', 'copas'), c('5', 'espadas')],
+  holeB: [c('A', 'ouros'), c('9', 'paus')],
+  comunitarias: FIXTURE_EMPATE_VOCE_A.comunitarias,
+};
+
+const FIXTURE_EMPATE_A_B = {
+  holeVoce: [c('4', 'copas'), c('5', 'espadas')],
+  holeA: [c('A', 'copas'), c('9', 'espadas')],
+  holeB: [c('A', 'ouros'), c('9', 'paus')],
+  comunitarias: FIXTURE_EMPATE_VOCE_A.comunitarias,
+};
+
+const FIXTURE_ROYAL_BOARD = {
+  holeVoce: [c('2', 'copas'), c('3', 'ouros')],
+  holeA: [c('4', 'copas'), c('5', 'ouros')],
+  holeB: [c('6', 'copas'), c('7', 'ouros')],
+  comunitarias: [
+    c('A', 'espadas'),
+    c('K', 'espadas'),
+    c('Q', 'espadas'),
+    c('J', 'espadas'),
+    c('10', 'espadas'),
+  ],
+};
+
+const FIXTURE_HEROI_PAR_A_FLUSH = {
+  holeVoce: [c('2', 'espadas'), c('2', 'paus')],
+  holeA: [c('4', 'copas'), c('8', 'copas')],
+  holeB: [c('3', 'ouros'), c('6', 'espadas')],
+  comunitarias: [
+    c('A', 'copas'),
+    c('K', 'copas'),
+    c('Q', 'copas'),
+    c('7', 'ouros'),
+    c('9', 'paus'),
+  ],
+};
+
+const FIXTURE_B_FLUSH = {
+  holeVoce: [c('3', 'ouros'), c('6', 'espadas')],
+  holeA: [c('2', 'espadas'), c('2', 'paus')],
+  holeB: [c('4', 'copas'), c('8', 'copas')],
+  comunitarias: FIXTURE_HEROI_PAR_A_FLUSH.comunitarias,
+};
+
+const FIXTURE_WHEEL_VS_SIX = {
+  holeVoce: [c('A', 'espadas'), c('7', 'ouros')],
+  holeA: [c('6', 'copas'), c('8', 'paus')],
+  holeB: [c('K', 'copas'), c('Q', 'paus')],
+  comunitarias: [
+    c('2', 'espadas'),
+    c('3', 'copas'),
+    c('4', 'ouros'),
+    c('5', 'paus'),
+    c('9', 'espadas'),
+  ],
+};
+
+const FIXTURE_WRAP = {
+  holeVoce: [c('4', 'espadas'), c('9', 'ouros')],
+  holeA: [c('8', 'copas'), c('J', 'paus')],
+  holeB: [c('6', 'ouros'), c('10', 'copas')],
+  comunitarias: [
+    c('K', 'espadas'),
+    c('A', 'copas'),
+    c('2', 'ouros'),
+    c('3', 'paus'),
+    c('7', 'copas'),
+  ],
+};
+
+const FIXTURE_SF_WHEEL = {
+  holeVoce: [c('A', 'espadas'), c('7', 'ouros')],
+  holeA: [c('K', 'copas'), c('Q', 'paus')],
+  holeB: [c('J', 'ouros'), c('10', 'copas')],
+  comunitarias: [
+    c('2', 'espadas'),
+    c('3', 'espadas'),
+    c('4', 'espadas'),
+    c('5', 'espadas'),
+    c('9', 'copas'),
+  ],
+};
+
+const FIXTURE_DOIS_FLUSH = {
+  holeVoce: [c('A', 'copas'), c('Q', 'copas')],
+  holeA: [c('J', 'copas'), c('8', 'copas')],
+  holeB: [c('4', 'espadas'), c('6', 'espadas')],
+  comunitarias: [
+    c('2', 'copas'),
+    c('5', 'copas'),
+    c('9', 'copas'),
+    c('K', 'ouros'),
+    c('3', 'paus'),
+  ],
+};
+
+const FIXTURE_EMPATE_NAIPES = {
+  holeVoce: [c('A', 'copas'), c('Q', 'espadas')],
+  holeA: [c('A', 'ouros'), c('Q', 'paus')],
+  holeB: [c('7', 'copas'), c('8', 'espadas')],
+  comunitarias: [
+    c('2', 'espadas'),
+    c('5', 'copas'),
+    c('9', 'ouros'),
+    c('K', 'ouros'),
+    c('3', 'paus'),
+  ],
+};
+
+const FIXTURE_BOARD_JOGA = {
+  holeVoce: [c('2', 'paus'), c('3', 'ouros')],
+  holeA: [c('4', 'paus'), c('5', 'ouros')],
+  holeB: [c('6', 'paus'), c('8', 'ouros')],
+  comunitarias: [
+    c('A', 'espadas'),
+    c('A', 'copas'),
+    c('A', 'ouros'),
+    c('K', 'espadas'),
+    c('K', 'copas'),
+  ],
+};
+
+const FIXTURE_MELHOR_QUE_MESA = {
+  holeVoce: [c('A', 'ouros'), c('3', 'ouros')],
+  holeA: [c('4', 'paus'), c('5', 'ouros')],
+  holeB: [c('6', 'paus'), c('8', 'ouros')],
+  comunitarias: [
+    c('A', 'espadas'),
+    c('A', 'copas'),
+    c('K', 'ouros'),
+    c('K', 'espadas'),
+    c('2', 'paus'),
+  ],
+};
+
+const FIXTURE_QUADRA = {
+  holeVoce: [c('A', 'copas'), c('3', 'ouros')],
+  holeA: [c('4', 'paus'), c('5', 'copas')],
+  holeB: [c('6', 'paus'), c('8', 'ouros')],
+  comunitarias: [
+    c('7', 'espadas'),
+    c('7', 'copas'),
+    c('7', 'ouros'),
+    c('7', 'paus'),
+    c('2', 'espadas'),
+  ],
+};
+
+const FIXTURE_TRINCA = {
+  holeVoce: [c('8', 'espadas'), c('8', 'copas')],
+  holeA: [c('K', 'copas'), c('Q', 'paus')],
+  holeB: [c('A', 'ouros'), c('J', 'paus')],
+  comunitarias: [
+    c('8', 'ouros'),
+    c('2', 'paus'),
+    c('9', 'espadas'),
+    c('3', 'copas'),
+    c('4', 'ouros'),
+  ],
+};
+
+const FIXTURE_DOIS_PARES = {
+  holeVoce: [c('A', 'espadas'), c('K', 'copas')],
+  holeA: [c('2', 'paus'), c('3', 'ouros')],
+  holeB: [c('4', 'paus'), c('5', 'ouros')],
+  comunitarias: [
+    c('A', 'ouros'),
+    c('K', 'paus'),
+    c('6', 'espadas'),
+    c('7', 'copas'),
+    c('9', 'ouros'),
+  ],
+};
+
+test('UNIVERSO_POTE: 7 ids RN-030 na prioridade RN-031', () => {
+  assert.equal(UNIVERSO_POTE.length, 7);
+  assert.deepEqual(
+    UNIVERSO_POTE.map((item) => item.id),
+    ['voce', 'adversarioA', 'adversarioB', 'voce_a', 'voce_b', 'a_b', 'tres'],
+  );
+  assert.deepEqual(
+    UNIVERSO_POTE.map((item) => item.rotulo),
+    [
+      'Você',
+      'Adversário A',
+      'Adversário B',
+      'Você e Adversário A',
+      'Você e Adversário B',
+      'Adversário A e Adversário B',
+      'Os três empatam',
+    ],
+  );
+});
+
+test('§7.1 mesma categoria, kicker do herói melhor → voce', () => {
+  const r = showdownDe(...Object.values(FIXTURE_KICKER_VOCE));
+  assert.equal(r.ok, true);
+  assert.equal(r.vencedorId, 'voce');
+  assert.deepEqual(r.vencedores, ['voce']);
+  assert.equal(r.maos.voce.categoriaId, r.maos.adversarioA.categoriaId);
+});
+
+test('§7.2 empate verdadeiro herói vs A, B atrás → voce_a', () => {
+  const r = showdownDe(...Object.values(FIXTURE_EMPATE_VOCE_A));
+  assert.equal(r.ok, true);
+  assert.equal(r.vencedorId, 'voce_a');
+  assert.deepEqual(r.vencedores, ['voce', 'adversarioA']);
+});
+
+test('§7.3 royal no board → três royal_flush e tres', () => {
+  const r = showdownDe(...Object.values(FIXTURE_ROYAL_BOARD));
+  assert.equal(r.ok, true);
+  assert.equal(r.maos.voce.categoriaId, 'royal_flush');
+  assert.equal(r.maos.adversarioA.categoriaId, 'royal_flush');
+  assert.equal(r.maos.adversarioB.categoriaId, 'royal_flush');
+  assert.equal(r.maos.voce.rotulo, 'Royal flush');
+  assert.notEqual(r.maos.voce.categoriaId, 'straight_flush');
+  assert.equal(r.vencedorId, 'tres');
+});
+
+test('§7.4 wheel vs six-high: six-high vence', () => {
+  const r = showdownDe(...Object.values(FIXTURE_WHEEL_VS_SIX));
+  assert.equal(r.ok, true);
+  assert.equal(r.maos.voce.categoriaId, 'straight');
+  assert.equal(r.maos.adversarioA.categoriaId, 'straight');
+  assert.equal(r.vencedorId, 'adversarioA');
+});
+
+test('§7.5 wrap K-A-2-3-4 não é straight nem SF', () => {
+  const r = showdownDe(...Object.values(FIXTURE_WRAP));
+  assert.equal(r.ok, true);
+  assert.notEqual(r.maos.voce.categoriaId, 'straight');
+  assert.notEqual(r.maos.voce.categoriaId, 'straight_flush');
+});
+
+test('§7.6 dois Flush: melhor sequência de ranks vence; naipe não desempatar', () => {
+  const r = showdownDe(...Object.values(FIXTURE_DOIS_FLUSH));
+  assert.equal(r.ok, true);
+  assert.equal(r.maos.voce.categoriaId, 'flush');
+  assert.equal(r.maos.adversarioA.categoriaId, 'flush');
+  assert.equal(r.maos.voce.rotulo, 'Flush');
+  assert.equal(r.vencedorId, 'voce');
+});
+
+test('§7.7 mesma categoria e ranks, naipes diferentes → empate', () => {
+  const r = showdownDe(...Object.values(FIXTURE_EMPATE_NAIPES));
+  assert.equal(r.ok, true);
+  assert.equal(r.vencedorId, 'voce_a');
+  assert.deepEqual(r.maos.voce.chaveDesempate, r.maos.adversarioA.chaveDesempate);
+});
+
+test('§7.8 A-2-3-4-5 suited → straight_flush, nunca royal', () => {
+  const r = showdownDe(...Object.values(FIXTURE_SF_WHEEL));
+  assert.equal(r.ok, true);
+  assert.equal(r.maos.voce.categoriaId, 'straight_flush');
+  assert.equal(r.maos.voce.rotulo, 'Straight flush');
+  assert.notEqual(r.maos.voce.categoriaId, 'royal_flush');
+  assert.equal(r.vencedorId, 'voce');
+});
+
+test('§7.9 board forte mas jogador monta melhor → esse vence, não tres', () => {
+  const r = showdownDe(...Object.values(FIXTURE_MELHOR_QUE_MESA));
+  assert.equal(r.ok, true);
+  assert.equal(r.vencedorId, 'voce');
+  assert.notEqual(r.vencedorId, 'tres');
+});
+
+test('§7.10 jogar a mesa é legal; categoria = avaliarMelhor5 das 7', () => {
+  const r = showdownDe(...Object.values(FIXTURE_BOARD_JOGA));
+  assert.equal(r.ok, true);
+  const sete = [...FIXTURE_BOARD_JOGA.holeVoce, ...FIXTURE_BOARD_JOGA.comunitarias];
+  assert.equal(r.maos.voce.categoriaId, avaliarMelhor5(sete).categoriaId);
+  assert.equal(r.vencedorId, 'tres');
+});
+
+test('§7.11 cada VencedorId é retorno de ≥1 fixture', () => {
+  const mapa = {
+    voce: FIXTURE_KICKER_VOCE,
+    adversarioA: FIXTURE_HEROI_PAR_A_FLUSH,
+    adversarioB: FIXTURE_B_FLUSH,
+    voce_a: FIXTURE_EMPATE_VOCE_A,
+    voce_b: FIXTURE_EMPATE_VOCE_B,
+    a_b: FIXTURE_EMPATE_A_B,
+    tres: FIXTURE_ROYAL_BOARD,
+  };
+  for (const [id, fx] of Object.entries(mapa)) {
+    const r = showdownDe(fx.holeVoce, fx.holeA, fx.holeB, fx.comunitarias);
+    assert.equal(r.ok, true, id);
+    assert.equal(r.vencedorId, id, id);
+  }
+});
+
+test('§7.12 cada CategoriaId é certa de ≥1 jogador em ≥1 river de 7', () => {
+  const cobertura = {
+    royal_flush: FIXTURE_ROYAL_BOARD,
+    straight_flush: FIXTURE_SF_WHEEL,
+    quadra: FIXTURE_QUADRA,
+    full_house: FIXTURE_BOARD_JOGA,
+    flush: FIXTURE_HEROI_PAR_A_FLUSH,
+    straight: FIXTURE_WHEEL_VS_SIX,
+    trinca: FIXTURE_TRINCA,
+    dois_pares: FIXTURE_DOIS_PARES,
+    par: FIXTURE_HEROI_PAR_A_FLUSH,
+    carta_alta: FIXTURE_WRAP,
+  };
+  const vistas = new Set();
+  for (const [id, fx] of Object.entries(cobertura)) {
+    const r = showdownDe(fx.holeVoce, fx.holeA, fx.holeB, fx.comunitarias);
+    assert.equal(r.ok, true, id);
+    const ids = [r.maos.voce.categoriaId, r.maos.adversarioA.categoriaId, r.maos.adversarioB.categoriaId];
+    assert.ok(ids.includes(id), id);
+    vistas.add(id);
+  }
+  assert.equal(vistas.size, 10);
+});
+
+test('§7.13 conjuntoOpcoesVencedor(tres) tem 6, inclui tres, exclui a_b', () => {
+  const ids = conjuntoOpcoesVencedor('tres');
+  assert.equal(ids.length, 6);
+  assert.equal(new Set(ids).size, 6);
+  assert.ok(ids.includes('tres'));
+  assert.equal(ids.includes('a_b'), false);
+});
+
+test('§7.14 conjuntoOpcoesVencedor(voce) tem 6, inclui voce, exclui tres', () => {
+  const ids = conjuntoOpcoesVencedor('voce');
+  assert.equal(ids.length, 6);
+  assert.equal(new Set(ids).size, 6);
+  assert.ok(ids.includes('voce'));
+  assert.equal(ids.includes('tres'), false);
+});
+
+test('§7.15 duplicata / aridade / naipe inválido → { ok: false } sem vencedorId', () => {
+  const duplicata = showdownDe(
+    [c('A', 'espadas'), c('K', 'copas')],
+    [c('A', 'espadas'), c('Q', 'ouros')],
+    [c('J', 'paus'), c('10', 'copas')],
+    [c('2', 'ouros'), c('3', 'paus'), c('4', 'espadas'), c('5', 'copas'), c('6', 'ouros')],
+  );
+  assert.deepEqual(duplicata, { ok: false });
+  assert.equal('vencedorId' in duplicata, false);
+
+  const aridade = quemGanhou({
+    holeVoce: [c('A', 'espadas')],
+    holeA: [c('K', 'copas'), c('Q', 'ouros')],
+    holeB: [c('J', 'paus'), c('10', 'copas')],
+    comunitarias: [c('2', 'ouros'), c('3', 'paus'), c('4', 'espadas'), c('5', 'copas'), c('6', 'ouros')],
+  });
+  assert.deepEqual(aridade, { ok: false });
+  assert.equal('vencedorId' in aridade, false);
+
+  const naipe = showdownDe(
+    [c('A', 'espadas'), c('K', 'copas')],
+    [c('Q', 'ouros'), c('J', 'paus')],
+    [c('10', 'copas'), c('9', 'ouros')],
+    [c('2', 'ouros'), c('3', 'paus'), c('4', 'espadas'), c('5', 'copas'), c('trevo')],
+  );
+  assert.deepEqual(naipe, { ok: false });
+});
+
+test('§7.16 retorno feliz não tem runouts; chaveDesempate só em maos', () => {
+  const r = showdownDe(...Object.values(FIXTURE_KICKER_VOCE));
+  assert.equal(r.ok, true);
+  assert.equal('runouts' in r, false);
+  assert.ok(Array.isArray(r.maos.voce.chaveDesempate));
 });
