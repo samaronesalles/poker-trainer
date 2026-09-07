@@ -1,7 +1,7 @@
 # PRD — Poker Trainer
 
 > Fonte da verdade **funcional**. Descreve comportamento esperado, não arquitetura.
-> Última atualização: 2026-09-07
+> Última atualização: 2026-09-07 (CR-001 — §5.7 colinha)
 > Contexto: [context.md](context.md)
 
 ## 1. Visão do produto
@@ -35,6 +35,7 @@ O motor avalia mãos com ranking completo (incluindo kickers e empates) para dec
 - Resultado da rodada + **Próxima mão**.
 - Empate / pote dividido.
 - Som suave, avatares, fichas decorativas, animações de carta.
+- Colinha de classificação das 10 categorias no desktop (PRD §5.7).
 
 ### 3.2 Excluído
 
@@ -43,16 +44,18 @@ O motor avalia mãos com ranking completo (incluindo kickers e empates) para dec
 - Draws nomeados (gutshot, flush draw, etc.).
 - Enunciado com kickers ou “par de ases”.
 - Upgrade *dentro* da mesma categoria (par mais forte, flush mais alto).
-- Relatório/gráficos de evolução; botão de zerar estatísticas (limpar dados do site no navegador basta).
+- Relatório/gráficos de evolução; botão de zerar estatísticas (limpar dados do site no navegador basta). A colinha da §5.7 **não** é relatório nem ranking de desempenho.
 - Controle de mute/volume na UI (se o browser bloquear o áudio, a mesa segue muda).
 - Desistir da mão em curso (só completar ou recarregar a página).
 - Conta, nuvem, multiplayer, outras variantes de poker.
+- Colinha no celular; persistir se a colinha está oculta; usar a colinha como cola na mesa ao vivo.
+- Destacar na colinha a mão atual da mesa ou clicar nela para responder o quiz.
 
 ## 4. Personas e permissões
 
 | Persona | Permissões / Ações permitidas |
 |---------|------------------------------|
-| Treinando (único papel) | Iniciar rodada, responder quizzes, pedir próxima mão, ouvir/ver a mesa. Não há login. Os dados de evolução pertencem a este navegador. |
+| Treinando (único papel) | Iniciar rodada, responder quizzes, pedir próxima mão, ouvir/ver a mesa, ocultar e reabrir a colinha no desktop. Não há login. Os dados de evolução pertencem a este navegador. |
 
 ## 5. Funcionalidades
 
@@ -153,6 +156,7 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 - **Movimento:** deal em leque/deslize até o assento; flop abre as três em sequência rápida; turn e river podem “queimar” visualmente (verso teatral, depois a street abre) de forma breve. O quiz só habilita depois das cartas da street pousarem. Teto: ~1 s de animação por street depois da primeira mão da sessão (a primeira pode ser um pouco mais lenta). “Não travar a UI” ≠ “permitir clique enquanto a carta ainda voa”.
 - **Som (MVP):** mix baixo; se o browser bloquear, segue mudo. Eventos: shuffle, deal, flop, virada de showdown, acerto, erro. Sem trilha contínua. Sem botão de mute no MVP.
 - **O que não fazer:** fundo branco de landing page; logo gigante; cards Material estilo dashboard; lista HTML nua; baralho de Unicode; confetes infantis; mascote falante; tutorial de 8 passos.
+- **Canto superior direito (desktop):** a §5.7 MAY ocupar este canto com a colinha em overlay. Comunitárias, hole cards, assentos e HUD permanecem desobstruídos (RN-050).
 
 ---
 
@@ -412,8 +416,61 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 **Critérios de aceitação:**
 - [ ] CA-022: Dado erro depois acerto na mesma pergunta de categoria, quando se lê a persistência, então a categoria correta tem +1 erro e +0 acerto naquela exposição.
 - [ ] CA-023: Dado acerto de primeira em Flush como mão atual, quando fecha e reabre, então o acerto de Flush em `mao_atual` permanece.
-- [ ] CA-024: Dado o MVP, quando se percorre a UI, então não há tela de relatório, gráfico, tabela de desempenho nem botão de zerar stats.
+- [ ] CA-024: Dado o MVP, quando se percorre a UI, então não há tela de relatório, gráfico, tabela de desempenho nem botão de zerar stats. A colinha da §5.7 não conta como relatório nem como ranking de desempenho.
 - [ ] CA-025: Dado um acerto, quando o feedback aparece, então é no HUD (não `alert`) e distingue-se do erro por **texto e** estado visual.
+
+---
+
+### 5.7 Colinha de classificação de mãos
+
+**Objetivo:** Quem ainda não decorou a hierarquia de Texas Hold’em consulta, no canto da mesa, uma miniatura das 10 categorias — qual mão ganha de qual — sem sair do clube, sem revelar a resposta do quiz e sem parecer uma prova escolar ao lado do feltro.
+
+**Diretriz de UX:** overlay compacto no visual de clube (feltro/rail), não infográfico vermelho de site. Cartas-exemplo no mesmo idioma visual da mesa (baralho clássico, índices legíveis em miniatura). A mesa continua o herói; a colinha é chrome que se oculta.
+
+**Fluxo principal:**
+1. No desktop, ao abrir o app (qualquer estado do HUD), a colinha está **visível** no canto superior direito: título **Classificação de mãos**, sentido Melhor → Pior, e as 10 linhas de RN-014.
+2. Cada linha tem número de ordem (1–10), rótulo canônico e cinco cartas-exemplo fixas; cartas que não formam o conjunto principal daquela categoria ficam esmaecidas.
+3. O usuário só olha. Não usa a colinha para responder.
+4. Aciona **Ocultar**; o painel some e resta um botão discreto **Colinha** no mesmo canto.
+5. Aciona **Colinha**; o painel volta. O estado vale só nesta visita.
+
+**Fluxos alternativos:**
+- Viewport estreito (celular / layout compacto da mesa, largura ≤ 900 px CSS): a colinha **não existe** — nem o painel nem o botão.
+- Mesa `ociosa`, `deal`, `perguntando`, `sem_upgrade` ou `resultado`: se o desktop mostra a colinha (ou o botão, se oculta), ela permanece no canto, fora do HUD.
+
+**Fluxos de exceção:**
+- N/A — componente estático. Sem dados da mão, sem rede, sem persistência própria. Falha de render da colinha **não** aborta a mão nem o quiz (fail-open: a mesa segue).
+
+**Regras de negócio:**
+- RN-048: A colinha lista **exatamente** as 10 categorias de RN-014, da mais forte para a mais fraca, com os **rótulos exatos**. MUST NOT usar sinônimos (`Sequência`, `Um par`, `Straight flush real`, etc.).
+- RN-049: Cada linha mostra um **exemplo ilustrativo fixo** de cinco cartas no visual de baralho do produto (índices + naipes; sem emoji/Unicode de baralho). As cartas do exemplo **não** são as da mão em curso. Cartas que não entram no conjunto principal daquela categoria (kicker da quadra, kickers de par, cartas de carta alta que não são a mais alta, etc.) ficam **esmaecidas**. O exemplo de cada categoria é estável entre visitas (não embaralha a cada mão).
+- RN-050: No layout largo da mesa (acima do breakpoint estreito da §5.1, típico ≤ 900 px), a colinha inicia **visível** no canto **superior direito**, em overlay. MUST NOT cobrir comunitárias, hole cards, assentos nem o HUD. No viewport de referência 1280×720 as cartas-exemplo e os rótulos permanecem legíveis.
+- RN-051: O usuário pode ocultar e reabrir na **mesma visita**. Oculta → só o controle discreto **Colinha** no mesmo canto. MUST NOT gravar essa preferência em `localStorage`, `sessionStorage`, cookie ou outra persistência. Recarregar a página no desktop restaura a colinha **visível**.
+- RN-052: A colinha é **estática** em relação ao treino: MUST NOT destacar a categoria da mesa, MUST NOT marcar a opção certa do quiz, MUST NOT submeter resposta. Clique ou tecla em uma linha da lista MUST NOT alterar o HUD. Continua valendo RN-G005 (nada na colinha revela a resposta).
+- RN-053: Em viewport estreito (largura ≤ 900 px CSS, o mesmo recorte compacto da §5.1), MUST NOT existir colinha nem o botão **Colinha**.
+- RN-054: A colinha não é pergunta, não entra no HUD, não incrementa evolução e não persiste cartas nem informação set. O título visível é **Classificação de mãos**. Controles em português (**Ocultar**, **Colinha**), alcançáveis por teclado. MUST NOT incorporar, copiar pixel a pixel nem carregar por URL a arte de terceiros usada só como referência de composição.
+
+**Casos de erro:**
+
+| Situação | Comportamento esperado |
+|----------|------------------------|
+| Falha ao montar o overlay | Mesa e quiz seguem; sem modal; colinha pode ausentar-se nesta visita |
+| Recarregar com a colinha oculta | Desktop: colinha visível de novo; evolução persistida inalterada |
+
+**Critérios de aceitação:**
+- [ ] CA-028: Dado o app aberto no desktop 1280×720 em estado ocioso, quando o usuário vê a tela, então a colinha está visível no canto superior direito com as 10 linhas de RN-014 (rótulos exatos, ordem 1→10), cada uma com cinco cartas-exemplo, e não cobre comunitárias, assentos nem o HUD.
+- [ ] CA-029: Dado a colinha visível no desktop, quando o usuário oculta e depois reabre, então o painel some deixando só **Colinha** no mesmo canto e, ao reabrir, o painel volta com as mesmas 10 linhas; ao recarregar a página, a colinha está visível de novo.
+- [ ] CA-030: Dado um quiz ativo (`perguntando`), quando o usuário olha ou aciona a colinha, então nenhuma linha está destacada como “a certa”, e clicar uma linha não muda enunciado, opções nem contadores.
+- [ ] CA-031: Dado viewport com largura ≤ 900 px, quando se abre o app, então não há painel de classificação nem botão **Colinha**.
+- [ ] CA-032: Dado a colinha ocultada no desktop, quando se inspeciona o armazenamento da origem, então a única chave de produto continua `poker-trainer:evolucao` (buckets `mao_atual`, `upgrade`, `vencedor_pote`); não existe chave de preferência da colinha.
+
+**UI/UX desta funcionalidade (detalhe de produto):**
+- Lista vertical compacta; indicador discreto de Melhor (topo) → Pior (base).
+- Esmaecer extras como na composição de referência — só o conjunto que define a categoria fica em destaque.
+- Painel no cromo do clube (escuro, tipo, contraste); não reproduzir o fundo vermelho da referência.
+- O botão **Colinha** (estado oculto) é mínimo: não compete com **Nova mão** / **Próxima mão**.
+
+---
 
 ## 6. Regras de negócio globais
 
@@ -431,7 +488,7 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 | Tipo | Descrição |
 |------|-----------|
 | Externa | Nenhuma API de jogo, pagamento ou identidade |
-| Interna | 5.2 antes de qualquer quiz; 5.3 da street antes de 5.4; flop completo antes do turn; turn completo antes do river; 5.5 após o river abrir (inclui a única 5.3 do herói no river); 5.6 atravessa todas as perguntas |
+| Interna | 5.2 antes de qualquer quiz; 5.3 da street antes de 5.4; flop completo antes do turn; turn completo antes do river; 5.5 após o river abrir (inclui a única 5.3 do herói no river); 5.6 atravessa todas as perguntas; 5.7 depende só do casco visual da 5.1 (não bloqueia o quiz) |
 | Infra | Hospedagem estática e persistência no navegador (ADRs) |
 
 ## 8. Restrições não-funcionais
@@ -462,6 +519,7 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 2. Assentos e quem está aberto no showdown.
 3. HUD ancorado embaixo (estilo Fold/Call/Raise), enunciado em uma frase, 6 opções em grade 2×3 ou 3×2 no desktop. Multi-select: as 6 opções + **Confirmar**.
 4. Feedback colado no HUD, não no topo da página.
+5. Colinha da §5.7 no canto superior direito (desktop), abaixo das cartas na hierarquia: consulta, não palco.
 
 **Estados da opção**
 - Padrão, hover, foco teclado, selecionada (multi-select), confirmada, **correta**, **errada e morta**.
@@ -499,6 +557,7 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 | Pote | Cenografia de fichas; no quiz, “quem ganhou o pote” |
 | Primeira tentativa | Primeiro clique (seleção única) ou primeira **Confirmar** (múltipla seleção) daquela pergunta |
 | HUD | Painel de pergunta/ação integrado à mesa |
+| Colinha | Overlay desktop com a classificação RN-014 em miniatura; não é pergunta nem relatório |
 | Runout | Cartas ainda por vir (turn e/ou river) no information set |
 | Wheel | Straight A-2-3-4-5 (Ás baixo) |
 
@@ -507,7 +566,7 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 - [context.md](context.md)
 - [speckit-roadmap.md](speckit-roadmap.md)
 - ADRs: [docs/adr/](adr/)
-- Change Requests: `docs/changes/`
+- Change Requests: [CR-001](changes/CR-001.md)
 
 ## Histórico de revisões
 
@@ -515,3 +574,4 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 |------|-----|--------|
 | 2026-09-07 | — | Criação inicial |
 | 2026-09-07 | — | Revisão de consistência: sem quiz preflop; 5.3 só flop/turn (river no §5.5 uma vez); ranking/wheel/sem wrap; burns não consomem carta; labels canônicos; distratoras e vencedor determinísticos; stats de falso positivo em upgrade; HUD estados; CA-001/012/014/026/027 |
+| 2026-09-07 | CR-001 | §5.7 colinha de classificação no desktop (RN-048–054, CA-028–032); CA-024 esclarece que colinha ≠ ranking de desempenho |

@@ -1,7 +1,7 @@
 # Context — Poker Trainer
 
 > Documento de visão macro. Descreve **por quê** o sistema existe, não **como** implementá-lo.
-> Última atualização: 2026-09-07 (revisão de consistência)
+> Última atualização: 2026-09-07 (CR-001 — colinha de classificação)
 
 ## Objetivo geral
 
@@ -49,6 +49,7 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 - Persistência no dispositivo da evolução por categoria (sem tela de relatório).
 - Encerramento da rodada com resultado e **Próxima mão**.
 - Interface imersiva de mesa de poker online (feltro, cartas animadas, avatares, fichas, som suave).
+- Colinha de classificação das 10 categorias (miniatura com cartas-exemplo) no canto da mesa no desktop, ocultável na visita.
 
 ### Fora do escopo (MVP)
 
@@ -60,7 +61,8 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 - Multiplayer, contas, login, sincronização entre dispositivos.
 - Outras variantes (Omaha, Stud, short deck); mais de três jogadores; torneios.
 - App nativo, backend, servidor de jogo.
-- Uso como “cola” na mesa ao vivo.
+- Uso como “cola” na mesa ao vivo (abrir o app no clube para colar). A colinha da tela de treino (desktop) é outro recorte — ver PRD §5.7.
+- Colinha no celular; lembrar oculto/visível depois de recarregar a página.
 
 ### Futuro (pós-MVP, sem compromisso)
 
@@ -70,6 +72,7 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 - Mais adversários, posições e tipos de board.
 - Som/tema configuráveis; modo rápido (cronômetro visível).
 - Sincronização da evolução entre dispositivos.
+- Colinha no viewport estreito; persistir a preferência de visibilidade (exigiria emenda à constitution / ADR-002).
 
 ## Limitações gerais
 
@@ -110,7 +113,7 @@ Não há cadastro, e-mail, nome real nem identificadores pessoais. O que permane
   - [ADR-005 — Cartas HTML/CSS + SVG](adr/ADR-005-cartas-html-css-svg.md)
   - [ADR-006 — ES modules sem bundler](adr/ADR-006-es-modules-sem-bundler.md)
   - [ADR-007 — Web Audio sintetizado](adr/ADR-007-webaudio-sintetizado.md)
-- Change Requests: `docs/changes/` (ainda inexistente)
+- Change Requests: [CR-001 — Colinha de classificação de mãos](changes/CR-001.md)
 
 ## Histórico de revisões
 
@@ -118,3 +121,4 @@ Não há cadastro, e-mail, nome real nem identificadores pessoais. O que permane
 |------|-------|--------|
 | 2026-09-07 | Samarone Salles | Criação inicial |
 | 2026-09-07 | Samarone Salles | Revisão de consistência com o PRD (preflop, river uma vez, burns, labels, limites de UI) |
+| 2026-09-07 | Samarone Salles | CR-001: colinha de classificação no desktop (escopo MVP); cola ao vivo continua fora |
