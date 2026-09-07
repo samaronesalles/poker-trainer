@@ -8,6 +8,24 @@
 
 **Input**: User description: "Implementar no flop e no turn, só após a 5.3 acertada, a múltipla seleção de upgrades: categoria C possível se existe runout no information set do herói (47 no flop, 46 no turn) cuja melhor mão é exatamente C e C é estritamente mais forte; 1–5 upgrades + distratoras até 6, ou os 6 mais fortes sem distratora; upgrades que não couberam não são cobrados; skip + Continuar se lista vazia; estatística RN-024 na primeira Confirmar — conforme PRD §5.4 (RN-020, RN-021, RN-022, RN-023, RN-024, RN-025, RN-026, RN-027, CA-014, CA-015, CA-016, CA-017)"
 
+## Clarifications
+
+### Session 2026-09-07
+
+- Q: Depois de o treinando acertar a mão atual, quando a mesa já precisa saber quais categorias mais fortes ainda são possíveis? → A: Assim que as comunitárias da street pousarem (enquanto a 5.3 ainda está aberta); o resultado fica pronto; a pergunta ou o skip só aparecem depois do beat da 5.3.
+- Q: Se a mesa não conseguir terminar a lista de mãos ainda possíveis, o que o treinando deve ver? → A: A mão aborta: HUD `ociosa` + **Nova mão**, no mesmo espírito de um deal que falhou; MUST NOT fingir lista vazia; os contadores já gravados nesta visita permanecem.
+- Q: Ao verificar quais cartas futuras ainda podem vir, o baralho vivo desta mão pode ser consumido ou reembaralhado? → A: Nunca: a enumeração usa um snapshot das cartas que o herói não vê; as 11 de jogo e burns visuais permanecem no lugar.
+- Q: Depois de “Você acertou” na mão atual, quanto o treinando pode esperar até a pergunta de upgrades ou o skip aparecerem? → A: No fim do beat (lista já pronta); se ainda não estiver pronta, o HUD permanece no acerto no máximo 1 segundo extra; sem spinner e sem skip falso.
+- Q: Se um adversário pudesse ganhar nesse mesmo desfecho, isso tira a categoria da lista de ainda possíveis do herói? → A: Não: só a melhor 5 do herói após o runout importa; quem levaria o pote fica para o showdown.
+
+### Session 2026-09-07 (2)
+
+- Q: No flop, ao testar um par de cartas futuras, a mesa olha só a melhor mão final com sete cartas, ou também a mão de seis cartas que existiria só no turn hipotético daquele par? → A: Só a melhor 5 das sete cartas finais daquele par; a mão intermediária de seis cartas daquele desfecho MUST NOT testemunhar categoria.
+- Q: Cada uma das nove categorias que podem ser upgrade precisa aparecer como upgrade verdadeiro em pelo menos um flop ou turn? → A: Sim: Royal flush, Straight flush, Quadra, Full house, Flush, Straight, Trinca, Dois pares e Par MUST ser upgrade verdadeiro em pelo menos um caso de flop ou turn; Carta alta nunca.
+- Q: Existe um controle para marcar todas as opções de uma vez? → A: Não: só liga/desliga opção a opção e **Confirmar**; MUST NOT haver “marcar todas”.
+- Q: Quando a pergunta de upgrades abre, para onde vai o foco do teclado? → A: Para a primeira opção na ordem visual; **Confirmar** permanece no Tab depois das opções ainda ativáveis.
+- Q: Para escolher a melhor 5 de um desfecho de sete cartas, esta feature usa o mesmo ranking completo da mão atual, inclusive kickers por dentro? → A: Sim: o mesmo critério da 004 (cinco cartas + categoria + ranks de kicker); o HUD mostra só o rótulo; kickers nunca vazam na UI.
+
 ## User Scenarios & Testing *(mandatory)*
 
 Esta feature substitui o **stub** de upgrades (Flush verdadeiro no flop; skip forçado no turn). O casco (001), o baralho honesto (002), o contrato de quiz (003) e o avaliador da mão atual (004) já existem. O valor é o treinando passar a marcar, no ponto de vista do herói, **quais categorias mais fortes ainda podem ser a melhor mão** com as cartas que faltam — sem draws nomeados, sem kickers no texto e sem pergunta no river (não resta carta).
@@ -28,6 +46,7 @@ O flop pousa. O treinando acerta **“Qual mão você tem agora?”**. Só entã
 4. **Given** o conjunto das opções **exibidas** correto, **When** o treinando aciona **Confirmar**, **Then** o HUD diz **“Você acertou”** e, após o beat, a street termina — **não** abre o turn ainda.
 5. **Given** a lista de upgrades vazia no flop, **When** seria a pergunta 5.4, **Then** o HUD vai a `sem_upgrade` com **“Não há upgrade possível.”** + **Continuar**; nenhum contador `upgrade` muda; **Continuar** permite o turn (CA-017 no caso royal; idem para qualquer lista vazia).
 6. **Given** o flop ainda voando, **When** o treinando procura a pergunta de upgrades, **Then** o HUD permanece em `deal` sem opções.
+7. **Given** o flop já pousado e a 5.3 ainda em curso, **When** a mesa prepara a lista RN-020, **Then** a lista já pode estar determinada — **não** aparece no HUD até o acerto e o beat da 5.3.
 
 ---
 
@@ -67,6 +86,7 @@ Cada pergunta de upgrades tenta **sempre 6** rótulos canônicos, salvo o skip d
 5. **Given** a mesma street com as mesmas cartas visíveis ao herói, **When** se monta o conjunto de opções (ignorando a ordem dos botões), **Then** o conjunto é o mesmo — a montagem é determinística.
 6. **Given** dez perguntas **novas** de upgrades (flop ou turn), **When** se observa a posição dos rótulos, **Then** o conjunto obrigatório **não** ocupa a mesma ordem visual em todas; após um erro na **mesma** pergunta, a ordem **não** muda (RN-G008).
 7. **Given** lista vazia, **When** o HUD reage, **Then** **não** se forçam 6 opções: há só a frase de skip + **Continuar** (RN-027).
+8. **Given** a pergunta de upgrades acaba de abrir, **When** o treinando usa só o teclado, **Then** o foco está na primeira opção da ordem visual; Tab segue para as demais ativáveis e depois **Confirmar**.
 
 ---
 
@@ -87,6 +107,8 @@ O treinando marca **Flush** (upgrade verdadeiro) e **Par** (distratora) e aperta
 5. **Given** já houve a 1ª **Confirmar**, **When** restam distratoras que **não** tinham sido marcadas, **Then** elas continuam selecionáveis (matá-las revelaria que são distratoras); marcá-las depois as elimina sem alterar contadores (RN-025).
 6. **Given** a pergunta em curso, **When** o treinando procura “pular” ou “mostrar quais faltam”, **Then** isso **não** existe; o conjunto certo só fica visivelmente completo quando ele o acerta (RN-G005).
 7. **Given** o flop e o turn da **mesma** mão, ambos com lista não vazia, **When** se lêem as 1ªs **Confirmar**, **Then** são duas exposições independentes em `upgrade` — MUST NOT fundir os deltas.
+8. **Given** a pergunta aberta, **When** o treinando procura um controle para marcar todas as opções de uma vez, **Then** isso **não** existe — só liga/desliga cada rótulo e **Confirmar**.
+
 
 ---
 
@@ -107,6 +129,9 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 5. **Given** burns cênicos, se existirem, **When** se conta o desconhecido, **Then** eles **não** retiram carta do information set (as 11 de jogo continuam a base; burn não consome).
 6. **Given** enunciado, opções e feedback desta pergunta, **When** se lê o texto, **Then** **não** há “draw”, “gutshot”, “flush draw”, “straight draw”, “oesd”, “outs” nomeados nem sinônimo de draw (RN-027).
 7. **Given** **Carta alta** como categoria, **When** se classifica upgrade, **Then** ela **nunca** é upgrade; MAY aparecer só como distratora (RN-022).
+8. **Given** um par hipotético de turn+river no flop cuja melhor 5 **das 6** (após só a primeira carta do par) seria Flush e a melhor 5 **das 7** é Full house, **When** se testemunha esse runout, **Then** ele testemunha **Full house**, não Flush — a mão intermediária de seis cartas daquele par MUST NOT contar.
+9. **Given** um desfecho de 7 cartas em que duas combinações de 5 têm categorias diferentes, **When** se escolhe a testemunha, **Then** vale a melhor 5 pelo ranking completo da 004 (kickers por dentro); o HUD ainda mostra só o rótulo.
+
 
 ---
 
@@ -135,7 +160,7 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 - Information set do flop: 52 − 2 hole do herói − 3 comunitárias = **47** desconhecidas. Runout = todos os pares de cartas distintas entre essas 47 (turn e river hipotéticos).
 - Information set do turn: 52 − 2 hole do herói − 4 comunitárias = **46** desconhecidas. Runout = cada uma das 46 como river.
 - Hole dos adversários **não** saem do desconhecido. Burns cênicos **não** consomem carta do conjunto.
-- Depois do runout o herói tem 7 cartas visíveis no critério de avaliação (2 hole + 5 comunitárias do desfecho). A categoria do desfecho é a da **melhor 5** entre essas 7 — o mesmo critério da 004 (wheel legal, wrap ilegal, royal ≠ straight flush).
+- Depois do runout o herói tem 7 cartas visíveis no critério de avaliação (2 hole + 5 comunitárias do desfecho). A categoria do desfecho é a da **melhor 5** entre essas 7 — o mesmo critério da 004 (wheel legal, wrap ilegal, royal ≠ straight flush, ranking completo com kickers só por dentro). No flop, a melhor 5 **das 6** cartas intermediárias daquele par MUST NOT testemunhar categoria.
 - “Exatamente C”: se a melhor 5 do desfecho é Royal flush, esse desfecho **não** testemunha Flush nem Straight flush.
 - Categoria atual e todas as mais fracas: nunca upgrade. **Carta alta** nunca upgrade.
 - Par fraco → par forte, flush baixo → flush alto: nunca upgrade (RN-046).
@@ -149,10 +174,18 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 - Recarregar no meio da pergunta: a mão aborta (casco); contadores já gravados nesta visita permanecem (003). MUST NOT pedir dado pessoal para retomar.
 - Armazenamento indisponível: o quiz e a enumeração seguem; a evolução MAY perder-se ao fechar (fail-open da 003).
 - Clique em morta / fora das opções / Confirmar com opções já no estado de acerto: ignora ou não regrava.
+- MUST NOT haver controle “marcar todas” / selecionar o conjunto inteiro de uma vez. Só toggle por opção + **Confirmar**.
+- Ao abrir a pergunta (HUD `perguntando` nesta 5.4), o foco de teclado MUST ir à primeira opção na ordem visual; Tab percorre opções ainda ativáveis e depois **Confirmar**.
+- Cada uma das nove categorias Royal flush … Par MUST ser upgrade verdadeiro em pelo menos um caso de flop ou turn desta feature; **Carta alta** MUST NOT ser esse caso.
 - Preferência por reduzir movimento: o contrato de correção não depende de animação; o beat de acerto permanece o da 003 (≤1 s, 0 s se movimento reduzido). Skip continua exigindo **Continuar**.
 - MUST NOT persistir cartas, runouts, information set, pool de cursor, enunciado, carimbo de data/hora ou identificador pessoal. Só os deltas de 1ª **Confirmar** no bucket `upgrade` das categorias **exibidas** e avaliadas.
 - Showdown (mão do herói no river, A, B, vencedor): **não** muda nesta feature; permanece o contrato da 003/004 até a 006.
 - A pergunta de mão atual (004) **não** é redesenhada. Esta feature só **consome** o acerto dela.
+- A lista RN-020 da street MUST ser determinada assim que as comunitárias dessa street pousarem (flop: 3; turn: 4), com o information set daquele instante. MUST NOT aparecer pergunta nem skip de upgrade enquanto a 5.3 dessa street não estiver acertada e o beat não tiver encerrado.
+- Enumeração MUST usar um **snapshot** das cartas que o herói não vê. MUST NOT consumir, reordenar nem reembaralhar o baralho vivo. MUST NOT virar carta hipotética no feltro. As 11 de jogo e burns visuais permanecem.
+- Quem ganharia o pote no desfecho hipotético MUST NOT filtrar a lista: um adversário “poderia ganhar” **não** remove categoria do herói. Só a melhor 5 do herói testemunha C.
+- Se a lista não puder ser concluída (falha da enumeração), a mão aborta: HUD `ociosa` + **Nova mão** (mesmo espírito da falha de montagem do baralho). MUST NOT fingir skip de lista vazia. MUST NOT ficar preso em “Você acertou”. Contadores já gravados nesta visita permanecem. MUST NOT persistir runouts nem dump do erro.
+- Depois do beat da 5.3, pergunta ou skip MUST aparecer na hora se a lista já estiver pronta. Se não estiver, o HUD MAY permanecer no acerto no máximo **1 s** extra. MUST NOT haver spinner, percentual, “calculando” nem jargão. MUST NOT usar skip falso enquanto espera. Com movimento reduzido, o beat da 5.3 já é 0 s; o teto de 1 s extra de espera pela lista permanece.
 
 ## Requirements *(mandatory)*
 
@@ -162,7 +195,7 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 - **FR-002**: No turn, só depois de a identificação da mão atual dessa street estar acertada e o beat encerrado, a mesa MUST apresentar a pergunta de upgrades **ou** o skip `sem_upgrade`. MUST NOT abrir o river ainda. MUST NOT existir pergunta de upgrades no river (não resta carta).
 - **FR-003**: A lista de upgrades de uma street MUST ser o conjunto das categorias C tais que: (a) C é **estritamente mais forte** que a mão atual do herói nessa street, na tabela canônica; (b) C **não** é **Carta alta**; (c) existe pelo menos um **runout legal** no information set do herói cuja **melhor** mão de 5 cartas do herói, após o runout, tenha categoria **exatamente C** (RN-020, RN-021, RN-022).
 - **FR-004**: O information set do herói MUST ser: baralho padrão menos as 2 hole do herói menos as comunitárias **já abertas**. No flop MUST haver **47** desconhecidas; no turn, **46**. As hole dos adversários MUST permanecer no desconhecido. Burns cênicos MUST NOT remover carta desse conjunto.
-- **FR-005**: No flop, runout legal MUST ser todo par de cartas distintas entre as 47 (as duas cartas que faltam ao board). No turn, runout legal MUST ser cada uma das 46 como a quinta comunitária. Depois do runout, a categoria testemunhada MUST ser a da melhor 5 entre as 7 cartas do herói (2 hole + 5 comunitárias do desfecho), com wheel legal, wrap ilegal e royal distinta de straight flush — o mesmo critério já vigente da mão atual.
+- **FR-005**: No flop, runout legal MUST ser todo par de cartas distintas entre as 47 (as duas cartas que faltam ao board). No turn, runout legal MUST ser cada uma das 46 como a quinta comunitária. Depois do runout, a categoria testemunhada MUST ser a da melhor 5 entre as **7** cartas do herói (2 hole + 5 comunitárias do desfecho), escolhida com o ranking completo já vigente da mão atual (cinco cartas + categoria + ranks de kicker por dentro; wheel legal, wrap ilegal, royal ≠ straight flush). Kickers MUST NOT vazar na UI. No flop, MUST NOT testemunhar a melhor 5 das **6** cartas intermediárias daquele par (a “mão do turn” hipotética daquele desfecho).
 - **FR-006**: Um runout cuja melhor mão é uma categoria D MUST testemunhar **somente** D. MUST NOT contar esse runout como testemunha de categoria mais fraca “contida” (ex.: royal **não** testemunha Flush nem Straight flush).
 - **FR-007**: Categoria igual à atual ou mais fraca MUST NOT ser upgrade. Melhorar só a força **dentro** da mesma categoria MUST NOT ser upgrade (RN-021, RN-046). **Carta alta** MUST NEVER ser upgrade (RN-022).
 - **FR-008**: Se a lista de upgrades for vazia, o HUD MUST ir a `sem_upgrade` com a frase exatamente **“Não há upgrade possível.”** e o CTA **Continuar**. MUST NOT haver grade, **Confirmar** nem estatística de categoria. **Continuar** MUST avançar a street sem alterar `upgrade` (RN-020, CA-017).
@@ -177,7 +210,7 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 - **FR-013**: A ordem **visual** das opções MUST ser embaralhada ao **apresentar** cada pergunta nova. O conjunto obrigatório MUST NOT ficar sempre na mesma ordem de botões. MUST NOT reembaralhar após erro na mesma pergunta. MUST NOT reembaralhar o baralho da mão ao embaralhar opções (RN-G008).
 - **FR-014**: Na **primeira Confirmar**, cada opção **exibida** MUST ser avaliada no bucket `upgrade` assim (RN-024): upgrade verdadeiro marcado → +1 acerto nessa categoria; upgrade verdadeiro não marcado → +1 erro nessa categoria; distratora marcada (falso positivo) → +1 erro nessa categoria; distratora não marcada → não incrementa. A gravação MUST ser imediata, ainda nesta pergunta.
 - **FR-015**: Depois da 1ª **Confirmar**: distratoras marcadas MUST desabilitar (visíveis, mortas); distratoras não marcadas MUST permanecer selecionáveis; upgrades já marcados corretamente MUST travar (não desmarcar); upgrades verdadeiros ainda não marcados MUST permanecer selecionáveis. Novas **Confirmar** até o conjunto exibido estar perfeito MUST NOT alterar os contadores da 1ª vez (RN-025, RN-026).
-- **FR-016**: Feedback, retry, opção morta, marca de acerto, beat de acerto (≤1 s, 0 s se movimento reduzido), teclado (Tab só no ativável; Enter/Espaço) e fail-open de persistência MUST reusar o contrato já vigente da 003. Textos canônicos: acerto **“Você acertou”**; erro **“Não é essa. Tente de novo.”**. MUST NOT haver `alert()`, pular pergunta nem revelar o conjunto certo antes do acerto (RN-034, RN-035, RN-G005).
+- **FR-016**: Feedback, retry, opção morta, marca de acerto, beat de acerto (≤1 s, 0 s se movimento reduzido), teclado (Tab só no ativável; nesta pergunta Enter/Espaço na opção liga/desliga e não submete) e fail-open de persistência MUST reusar o contrato já vigente da 003. Textos canônicos: acerto **“Você acertou”**; erro **“Não é essa. Tente de novo.”**. MUST NOT haver `alert()`, pular pergunta nem revelar o conjunto certo antes do acerto (RN-034, RN-035, RN-G005).
 - **FR-017**: O flop e o turn da **mesma** mão MUST ser exposições independentes em `upgrade` quando ambos tiverem lista não vazia. MUST NOT omitir a pergunta do turn só porque a lista do flop foi cobrada. MUST NOT fundir os dois deltas. Skip numa street MUST NOT criar exposição.
 - **FR-018**: MUST haver no máximo uma pergunta por vez no HUD (RN-G001). MUST NOT avançar de street enquanto a 5.3 e a 5.4 (ou skip) dessa street não estiverem concluídas (RN-G002).
 - **FR-019**: MUST NOT persistir cartas, runouts, information set, pool de cursor, enunciado, opções, carimbo de data/hora, identificador de sessão ou qualquer dado pessoal. O único efeito persistido desta pergunta MUST ser o delta de 1ª **Confirmar** em `upgrade` das categorias **exibidas** e avaliadas, no mesmo bloco de evolução já definido (sem novos buckets, sem relatório, sem botão zerar).
@@ -185,18 +218,27 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 - **FR-021**: Se a memória de treino falhar, a enumeração e o quiz MUST continuar; a evolução MAY perder-se ao fechar. MUST NOT haver `alert()` nem jargão que bloqueie o HUD.
 - **FR-022**: Esta feature MUST substituir o stub de upgrades da 003 (Flush verdadeiro no flop; skip forçado no turn). MUST NOT redesenhar a identificação da mão atual (004) nem o showdown (006). MUST NOT alterar `mao_atual` nem `vencedor_pote` por causa desta pergunta.
 - **FR-023**: Toda interface visível desta pergunta (enunciado, 10 rótulos, skip, **Confirmar**, **Continuar**, feedback herdado) MUST estar em português brasileiro, com termos de clube flop/turn/river permitidos.
+- **FR-024**: A lista de upgrades da street MUST ser determinada assim que as comunitárias dessa street tiverem pousado (flop: 3; turn: 4), com o information set daquele instante. O resultado MUST permanecer pronto em memória da visita. MUST NOT apresentar a pergunta de upgrades nem o skip `sem_upgrade` antes de a 5.3 dessa street estar acertada e o beat encerrado (RN-G002).
+- **FR-025**: A enumeração MUST operar sobre um **snapshot** das cartas que o herói não vê. MUST NOT consumir, reordenar, retirar nem reembaralhar o baralho vivo da mão. MUST NOT distribuir cartas hipotéticas nos slots. As 11 cartas de jogo e burns visuais MUST permanecer onde estão.
+- **FR-026**: A melhor mão de um adversário no mesmo desfecho hipotético MUST NOT remover categoria da lista de upgrades do herói. C é upgrade se e somente se FR-003 vale para o herói. Quem leva o pote MUST permanecer fora desta feature (showdown / 006).
+- **FR-027**: Se a enumeração não puder ser concluída, a mão em curso MUST abortar: HUD `ociosa` com **Nova mão**, no mesmo espírito da falha de montagem do baralho. MUST NOT tratar a falha como lista vazia. MUST NOT permanecer indefinidamente em “Você acertou”. Contadores já persistidos nesta visita MUST permanecer. MUST NOT persistir runouts, snapshot, stack de erro ou identificador.
+- **FR-028**: Após o beat da 5.3, a pergunta de upgrades ou o skip MUST ficar visíveis imediatamente se a lista já estiver pronta. Se ainda não estiver, o HUD MAY permanecer no estado de acerto por no máximo **1 segundo** extra. MUST NOT exibir spinner, percentual, “calculando” nem jargão técnico. MUST NOT usar `sem_upgrade` só para não esperar. Com preferência por reduzir movimento, o beat da 5.3 já é 0 s; o teto de 1 s extra pela lista permanece.
+- **FR-029**: MUST NOT existir controle para marcar todas as opções de uma vez. O treinando MUST ligar ou desligar cada opção individualmente; só **Confirmar** avalia o conjunto.
+- **FR-030**: Quando o HUD entra em `perguntando` nesta pergunta, o foco de teclado MUST ir à primeira opção na ordem visual. Tab MUST percorrer só opções ainda ativáveis e em seguida o **Confirmar**. Enter/Espaço na opção MUST ligar/desligar (não submete); Enter/Espaço em **Confirmar** MUST submeter.
+- **FR-031**: As nove categorias **Royal flush**, **Straight flush**, **Quadra**, **Full house**, **Flush**, **Straight**, **Trinca**, **Dois pares** e **Par** MUST ser, cada uma, upgrade verdadeiro em pelo menos um caso de flop ou turn. **Carta alta** MUST NEVER ser upgrade verdadeiro.
 
 ### Key Entities
 
 - **Information set do herói**: cartas que o herói **não** vê nesta street. Flop: 47. Turn: 46. Inclui as hole dos adversários. Não inclui as 2 hole do herói nem as comunitárias já abertas. Burns cênicos não retiram carta daqui.
-- **Runout legal**: no flop, um par de desconhecidas que completaria o board; no turn, uma desconhecida como river. Cada runout produz uma melhor 5 do herói.
+- **Runout legal**: no flop, um par de desconhecidas que completaria o board; no turn, uma desconhecida como river. Cada runout produz uma melhor 5 do herói entre as **7** cartas finais (não a mão de 6 intermediária do flop).
 - **Upgrade de categoria**: rótulo canônico estritamente mais forte que a mão atual, que não é **Carta alta**, e para o qual existe pelo menos um runout cuja melhor mão é **exatamente** esse rótulo.
 - **Lista de upgrades**: o conjunto RN-020 da street, **antes** do teto de 6. Pode ser vazia.
 - **Conjunto de opções exibidas**: até 6 rótulos visíveis. Ou todos os upgrades + distratoras até 6, ou os 6 upgrades mais fortes. É o único conjunto cobrado.
 - **Distratora**: rótulo canônico exibido que **não** é upgrade nesta street. Só existe quando há 1 a 5 upgrades.
 - **Pergunta de upgrades**: exposição de múltipla seleção no HUD, enunciado **“Quais mãos você ainda não tem, mas ainda pode formar?”**, CTA **Confirmar**. Ocorre só no flop e no turn, só após a 5.3 da street.
-- **Skip `sem_upgrade`**: estado do HUD quando a lista é vazia. Frase **“Não há upgrade possível.”** + **Continuar**. Não é pergunta; não gera estatística.
+- **Skip `sem_upgrade`**: estado do HUD quando a lista é vazia. Frase **“Não há upgrade possível.”** + **Continuar**. Não é pergunta; não gera estatística. MUST NOT ser usado para mascarar falha de enumeração nem espera.
 - **Primeira Confirmar**: a primeira submissão do conjunto nesta pergunta; único evento que altera `upgrade` das opções exibidas (contrato da 003).
+- **Snapshot do desconhecido**: cópia em memória das 47 (flop) ou 46 (turn) cartas que o herói não vê, usada só para enumerar runouts nesta visita. Não é o baralho vivo; não se persiste.
 
 ### Fora de escopo (esta feature)
 
@@ -225,21 +267,40 @@ O treinando aprende dois cortes que o stub escondia. Primeiro: **melhor** mão *
 - **SC-012**: Em 100% dos acertos da 5.3 no flop, a mesa segue para upgrades ou skip da **mesma** street; 0 desses acertos abrem o turn ainda.
 - **SC-013**: Em 100% das mãos que concluem upgrades (não-skip) no flop **e** no turn, há duas 1ªs **Confirmar** gravadas em `upgrade` (uma por street).
 - **SC-014**: Em qualquer sequência de 10 perguntas novas de upgrades, o conjunto obrigatório **não** ocupa a mesma ordem visual em todas; após erro, 100% das retries da mesma pergunta mantêm a ordem (RN-G008).
-- **SC-015**: 0 coletas de dado pessoal; 0 persistência de cartas, runouts ou replay; o único efeito que sobrevive ao fechar a aba continua sendo a evolução de treino já definida, com `upgrade` atualizado só na 1ª **Confirmar** das opções exibidas.
+- **SC-015**: 0 coletas de dado pessoal; 0 persistência de cartas, runouts, snapshot ou replay; o único efeito que sobrevive ao fechar a aba continua sendo a evolução de treino já definida, com `upgrade` atualizado só na 1ª **Confirmar** das opções exibidas.
 - **SC-016**: Em 100% dos casos em que o herói já tem trinca, **Par** não é opção obrigatória de upgrade (não é upgrade).
+- **SC-017**: Em 100% das streets, a lista RN-020 dessa street já está determinada quando as comunitárias dela pousam; em 0% dos casos a pergunta ou o skip de upgrade aparecem antes do acerto e do beat da 5.3.
+- **SC-018**: Em 100% das falhas de enumeração, o HUD volta a `ociosa` com **Nova mão**; 0 skips `sem_upgrade` falsos; 0 persistências de runout ou dump.
+- **SC-019**: Em 100% das enumerações, as 11 cartas de jogo e burns visuais permanecem inalterados (mesmas faces, mesmos slots).
+- **SC-020**: Em 100% dos acertos da 5.3, a pergunta de upgrades ou o skip ficam visíveis no fim do beat ou em no máximo 1 segundo extra no estado de acerto; 0 spinners, 0 textos “calculando”, 0 skips só por espera.
+- **SC-021**: Em 100% das listas, 0 categorias são removidas só porque um adversário poderia ganhar no mesmo desfecho.
+- **SC-022**: Em 100% dos pares hipotéticos no flop, a testemunha é a melhor 5 das **7** cartas finais; 0 testemunhas vêm da melhor 5 intermediária das 6.
+- **SC-023**: Cada uma das nove categorias Royal flush … Par é upgrade verdadeiro em ≥1 caso de flop ou turn; **Carta alta** é upgrade verdadeiro em 0 casos.
+- **SC-024**: Em 100% das UIs desta pergunta, há 0 controles “marcar todas”.
+- **SC-025**: Em 100% das aberturas da pergunta (não-skip), o foco de teclado começa na primeira opção visual; Enter/Espaço nessa opção não submete.
+- **SC-026**: Em 100% dos desfechos de 7 cartas, a categoria testemunhada é a da melhor 5 pelo ranking completo da 004 (kickers só por dentro); 0 kickers no HUD.
 
 ## Assumptions
 
 - **Git / numeração**: o diretório da feature é `specs/005-maos-ainda-possiveis/` (ShortName `maos-ainda-possiveis`, número **005**, sequential). Não há `.specify/extensions.yml` nem hook `before_specify`; o repositório permanece em `main` (pedido explícito). Identidade da spec: `005-maos-ainda-possiveis`. O campo `BRANCH_NAME` do script de bootstrap é só o slug do diretório — **não** se criou branch Git. **Não** houve commit nesta invocação.
-- **Fonte de verdade**: comportamento desta spec = PRD §5.4 (RN-020, RN-021, RN-022, RN-023, RN-024, RN-025, RN-026, RN-027, CA-014, CA-015, CA-016, CA-017) + RN-046 reiterado + RN-G001, RN-G002, RN-G004, RN-G005, RN-G007, RN-G008 + contrato de quiz/persistência da feature 003 + avaliador de melhor 5 da feature 004 + gates da constitution (idioma, LGPD, custo zero, treino e não jogo, fail-open). Nenhum `[NEEDS CLARIFICATION]` residual.
+- **Fonte de verdade**: comportamento desta spec = PRD §5.4 (RN-020, RN-021, RN-022, RN-023, RN-024, RN-025, RN-026, RN-027, CA-014, CA-015, CA-016, CA-017) + RN-046 reiterado + RN-G001, RN-G002, RN-G004, RN-G005, RN-G007, RN-G008 + contrato de quiz/persistência da feature 003 + avaliador de melhor 5 da feature 004 + gates da constitution (idioma, LGPD, custo zero, treino e não jogo, fail-open) + decisões em **Clarifications**. Nenhum `[NEEDS CLARIFICATION]` residual.
 - **Escolha autônoma — distratoras (RN-023)**: o PRD define *o que* é distratora (categoria que não é upgrade nesta street) e o teto 6, mas não a ordem de escolha quando sobram várias. Adotado: preencher da mais forte para a mais fraca na tabela canônica, sem repetir. Determinístico, alinhado ao recorte “6 mais fortes”, sem heurística extra de “board tentador” (essa é da 004). **Carta alta** e a categoria atual MAY ser distratoras.
 - **Escolha autônoma — “exatamente C”**: um desfecho testemunha só a categoria da melhor 5. Não se promove categoria inferior “embutida”. Coerente com ADR-003 e com royal ≠ straight flush da 004.
 - **Escolha autônoma — duas streets**: flop e turn são exposições independentes em `upgrade` quando ambos têm lista não vazia (mesmo padrão da 004 em `mao_atual`). Skip não gera exposição.
-- **Escolha autônoma — avaliador do desfecho**: reusa o critério de melhor 5 já especificado na 004 (5/6/7 cartas visíveis; no runout sempre 7). Esta spec **não** redefine wheel, wrap, royal nem kickers internos. Kickers continuam só para escolher a melhor 5; MUST NOT vazar na UI.
+- **Escolha autônoma — avaliador do desfecho**: reusa o critério de melhor 5 já especificado na 004 (5/6/7 cartas visíveis; no runout sempre 7, ranking completo com kickers por dentro). No flop MUST NOT usar a mão de 6 cartas intermediária daquele par. Esta spec **não** redefine wheel, wrap, royal nem kickers internos. Kickers continuam só para escolher a melhor 5; MUST NOT vazar na UI.
+- **Escolha autônoma — momento da lista (clarify)**: determinar RN-020 no pouso das comunitárias da street, não depois do beat da 5.3, para o HUD não congelar. Mostrar continua gated por RN-G002.
+- **Escolha autônoma — falha de enumeração (clarify)**: abortar a mão (`ociosa` + **Nova mão`), como a falha de montagem do baralho. Skip falso treinaria a lição errada; travar no acerto violaria o ritmo da mesa. Fail-open de áudio/storage **não** autoriza mentir no quiz.
+- **Escolha autônoma — snapshot (clarify)**: enumerar sem tocar no baralho vivo preserva RN-044 / feature 002.
+- **Escolha autônoma — espera (clarify)**: teto de 1 s extra no estado de acerto, alinhado ao beat/deal; sem spinner (jargão) e sem skip de espera.
+- **Escolha autônoma — pote hipotético (clarify)**: upgrades são o que o herói ainda pode **formar**, não o que ainda pode **ganhar**. Vencedor é a 006.
+- **Escolha autônoma — 7 vs 6 no flop (clarify)**: um par (turn, river) testemunha só o rio final; senão uma Flush “de passagem” no turn hipotético viraria upgrade mesmo quando o rio faz Full house.
+- **Escolha autônoma — cobertura das 9 (clarify)**: cada categoria que pode ser upgrade precisa de pelo menos um caso verdadeiro, no mesmo espírito das 10 da 004; **Carta alta** continua excluída.
+- **Escolha autônoma — sem marcar todas (clarify)**: atalho revelaria ou pularia a leitura; só toggle + **Confirmar**.
+- **Escolha autônoma — foco (clarify)**: primeira opção visual, alinhado ao HUD `perguntando` da 001/003; Enter/Espaço na opção não submete (RN-047).
 - **Dependências**: 001 (palco e `sem_upgrade`), 002 (11 cartas honestas; burns não consomem), 003 (múltipla seleção, **Confirmar**, RN-024/025/026, G008, fail-open), 004 (mão atual autoritativa no flop/turn; acerto dispara esta pergunta). Esta feature **não** redesenha esses contratos.
 - **Stub que some**: o conjunto provisório “Flush verdadeiro + Par distratora” do flop e o skip forçado do turn **deixam** de valer. Flush e Par só entram se a regra RN-020/023 desta street os colocar. O caminho de **Confirmar** vs. skip permanece observável, agora com lista real nas duas streets. O showdown stub (006) **permanece**.
 - **Copy canônica herdada**: enunciado = “Quais mãos você ainda não tem, mas ainda pode formar?”; skip = “Não há upgrade possível.”; acerto = “Você acertou”; erro = “Não é essa. Tente de novo.”; CTAs = **Confirmar** e **Continuar**. Sem sinônimos e sem vocabulário de draws.
-- **Privacidade**: apelidos fixos **Você**, **Adversário A**, **Adversário B**; avatares ilustrados. Recarregar aborta a mão e não apaga evolução já gravada. Coordenadas de ponteiro da 002 continuam só em memória da visita. Runouts e o information set MUST NOT ser persistidos.
+- **Privacidade**: apelidos fixos **Você**, **Adversário A**, **Adversário B**; avatares ilustrados. Recarregar aborta a mão e não apaga evolução já gravada. Coordenadas de ponteiro da 002 continuam só em memória da visita. Runouts, snapshot e o information set MUST NOT ser persistidos.
 - **Constitution como constraint**: sem backend, sem cadastro, custo zero, sem relatório/zerar, desktop-first, fail-open, RN-G001..G008. A enumeração no ponto de vista do herói já está decidida no **ADR-003**; esta spec descreve o **quê** (lista RN-020, teto de 6, skip, 1ª **Confirmar**). Detalhe de implementação fica para `/speckit-plan`.
 - **Idioma**: UI em pt-BR; identificadores internos podem estar em inglês.
-- **Clarify / plan / tasks / implement**: esta invocação **não** executa esses comandos e **não** altera código de produção.
+- **Clarify / plan / tasks / implement**: `/speckit-clarify` sessões 1 e 2 (2026-09-07) gravaram dez decisões em **Clarifications**. Esta invocação **não** executa plan/tasks/implement e **não** altera código de produção.
