@@ -12,6 +12,7 @@ import {
   validarPermutacao,
 } from './baralho.js';
 import { aplicarVisibilidade, criarBurnCenico, criarElementoCarta } from './carta.js';
+import { montarColinha, sincronizarViewport } from './colinha.js';
 import {
   assentoEmFoco,
   chavesCartasVencedoras,
@@ -524,8 +525,12 @@ function slotEl(n) {
   return document.querySelector(`[data-slot="${n}"]`);
 }
 
+function cartasDaMesa() {
+  return $all('.palco .carta');
+}
+
 function limparCartas() {
-  for (const el of $all('.carta')) el.remove();
+  for (const el of cartasDaMesa()) el.remove();
   const burn = $('[data-burn]');
   if (burn) burn.replaceChildren();
 }
@@ -658,14 +663,14 @@ function aplicarOffsetPote() {
 }
 
 function destacarCartasVencedoras() {
-  for (const el of $all('.carta')) {
+  for (const el of cartasDaMesa()) {
     delete el.dataset.vencedora;
   }
   if (sessao.hud.estado !== 'resultado') return;
   const chaves = new Set(
     chavesCartasVencedoras(sessao.mao?.showdown, sessao.pote.vencedoresVisuais),
   );
-  for (const el of $all('.carta')) {
+  for (const el of cartasDaMesa()) {
     const chave = `${el.dataset.rank}-${el.dataset.suit}`;
     if (chaves.has(chave)) el.dataset.vencedora = 'true';
   }
@@ -1122,7 +1127,7 @@ async function iniciarMao({ proxima = false } = {}) {
 
 async function recolherCartas() {
   const origem = $('#sapato') || $('#mesa');
-  const cartas = $all('.carta');
+  const cartas = cartasDaMesa();
   if (sessao.movimentoReduzido || cartas.length === 0) {
     limparCartas();
     return;
@@ -1274,8 +1279,23 @@ export function bootMesa() {
   window.addEventListener('resize', () => {
     aplicarComposicao();
     aplicarOffsetPote();
+    try {
+      sincronizarViewport(window.innerWidth);
+    } catch {
+      /* fail-open */
+    }
   });
   aplicarComposicao();
+  try {
+    montarColinha($('#clube'));
+  } catch {
+    /* fail-open */
+  }
+  try {
+    sincronizarViewport(window.innerWidth);
+  } catch {
+    /* fail-open */
+  }
   renderHud();
   atualizarPote();
 }

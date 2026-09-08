@@ -1,49 +1,52 @@
 ---
-description: Sessùo da mesa sem PII; evoluùùo sù com contadores na chave poker-trainer:evolucao
+description: Sess?o da mesa sem PII; evoluÁ?o sÛ com contadores; colinha sÛ em memÛria
 globs: index.html,js/**/*.js,css/**/*.css
 alwaysApply: true
 ---
 
-# LGPD ù Sessùo local sem dado pessoal
+# LGPD ? Sess?o local sem dado pessoal
 
 ## Contexto
-A mesa (features 001ù006) opera um treino single-player no navegador. Apelidos e avatares sùo de produto. Recarregar aborta a mùo e apaga o pool de mistura. A evoluùùo persiste **somente** contadores de treino no `localStorage` da origem. Coordenadas de ponteiro sù misturam um buffer compacto em memùria e sùo descartadas ù sem trajetùria, sem log. O motor (`js/motor.js`) avalia a melhor 5, enumera upgrades e compara o showdown (`quemGanhou`) sù em memùria; kickers, runouts, snapshot, dump de `quemGanhou` e `chaveDesempate` nunca saem do processo.
+A mesa (features 001?007) opera um treino single-player no navegador. Apelidos e avatares s?o de produto. Recarregar aborta a m?o e apaga o pool de mistura. A evoluÁ?o persiste **somente** contadores de treino no `localStorage` da origem. Coordenadas de ponteiro sÛ misturam um buffer compacto em memÛria e s?o descartadas ? sem trajetÛria, sem log. O motor (`js/motor.js`) avalia a melhor 5, enumera upgrades e compara o showdown (`quemGanhou`) sÛ em memÛria; kickers, runouts, snapshot, dump de `quemGanhou` e `chaveDesempate` nunca saem do processo. A colinha (feature 007) È lenda est·tica: o estado de visita `visÌvel`/`oculto` e as cartas-exemplo ficam **somente** em memÛria desta abertura.
 
-## Artigo(s) LGPD aplicùvel(is)
-- Art. 6ù, III (necessidade): nùo coletar o que o treino nùo precisa.
-- Art. 6ù, VIII (prevenùùo) e Art. 46 ù2ù (privacy by design).
-- Art. 5ù, I: dado pessoal ù o que identifica pessoa natural ù apelido digitado, foto real e identificadores persistidos entram nessa categoria.
+## Artigo(s) LGPD aplic·vel(is)
+- Art. 6?, III (necessidade): n?o coletar o que o treino n?o precisa.
+- Art. 6?, VIII (prevenÁ?o) e Art. 46 ß2? (privacy by design).
+- Art. 5?, I: dado pessoal È o que identifica pessoa natural ? apelido digitado, foto real e identificadores persistidos entram nessa categoria.
 
 ## Regra
-NUNCA peùa, armazene ou envie CPF, e-mail, nome real, apelido digitado, telefone, foto de pessoa ou qualquer identificador.
-NUNCA grave cartas, pool de cursor, timestamp, `versao`, session id, `Melhor5`, `chaveDesempate`, runouts, snapshot, dump de `quemGanhou` ou information set no `localStorage`.
+NUNCA peÁa, armazene ou envie CPF, e-mail, nome real, apelido digitado, telefone, foto de pessoa ou qualquer identificador.
+NUNCA grave cartas, pool de cursor, timestamp, `versao`, session id, `Melhor5`, `chaveDesempate`, runouts, snapshot, dump de `quemGanhou`, information set, prefer?ncia da colinha, cartas-exemplo ou uma chave nova de overlay no `localStorage` / `sessionStorage` / cookie / IndexedDB.
 SEMPRE persista, se persistir, **somente** os buckets `mao_atual`, `upgrade` e `vencedor_pote` na chave `poker-trainer:evolucao`, via `js/storage.js`.
-SEMPRE use os apelidos fixos **Vocù**, **Adversùrio A**, **Adversùrio B** e avatares ilustrados (ficha de personagem), nunca foto real nem upload.
-`js/mesa.js` MUST NOT chamar `localStorage` direto nem importar `js/motor.js`. `js/motor.js` MUST NOT persistir nada. Sem botùo zerar, sem relatùrio, fail-open se o armazenamento falhar. Sem `fetch` de telemetria.
-Destaque de cartas vencedoras (`data-vencedora`), marcador de street e offset do pote ficam sù no DOM/memùria da sessùo ù NUNCA no `localStorage`.
+SEMPRE use os apelidos fixos **Voc?**, **Advers·rio A**, **Advers·rio B** e avatares ilustrados (ficha de personagem), nunca foto real nem upload.
+`js/mesa.js` MUST NOT chamar `localStorage` direto nem importar `js/motor.js`. `js/motor.js` MUST NOT persistir nada. `js/colinha.js` MUST NOT chamar storage, MUST NOT importar `js/motor.js` e MUST NOT persistir a prefer?ncia ? reload restaura a colinha visÌvel. Sem bot?o zerar, sem relatÛrio, fail-open se o armazenamento falhar. Sem `fetch` de telemetria.
+Destaque de cartas vencedoras (`data-vencedora`), marcador de street, offset do pote e estado da colinha ficam sÛ no DOM/memÛria da sess?o ? NUNCA no `localStorage`.
 
 ## Exemplo INCORRETO
 ```js
 const nome = prompt('Seu apelido na mesa');
 localStorage.setItem('jogador', nome);
+localStorage.setItem('poker-trainer:colinha', 'oculto');
 localStorage.setItem('poker-trainer:evolucao', JSON.stringify({ email, mao_atual, quemGanhou }));
 ```
 
 ## Exemplo CORRETO
 ```js
-const APELIDOS = { voce: 'Vocù', adversarioA: 'Adversùrio A', adversarioB: 'Adversùrio B' };
+const APELIDOS = { voce: 'Voc?', adversarioA: 'Advers·rio A', adversarioB: 'Advers·rio B' };
 storage.aplicarDeltas({ bucket: 'vencedor_pote', acertos: 1 });
-// JSON sù com os trùs buckets; reload da pùgina aborta a mùo, nùo zera a chave
-// motor.quemGanhou(...) e avaliarMelhor5(cartas) ficam sù em memùria ù dump/chaveDesempate nunca no storage
+// JSON sÛ com os tr?s buckets; reload da p·gina aborta a m?o, n?o zera a chave
+// motor.quemGanhou(...) e avaliarMelhor5(cartas) ficam sÛ em memÛria ? dump/chaveDesempate nunca no storage
+// visita da colinha: estadoInicial() em memÛria; sem persistir
 ```
 
-## Quando esta rule NùO se aplica
-- Features posteriores MAY ler os mesmos contadores para um relatùrio pùs-MVP, ainda sem PII e sem envio a servidor ù exige emenda de constitution.
+## Quando esta rule N?O se aplica
+- Features posteriores MAY ler os mesmos contadores para um relatÛrio pÛs-MVP, ainda sem PII e sem envio a servidor ? exige emenda de constitution.
 
-## Histùrico
+## HistÛrico
 - Criada ao implementar o casco da mesa (feature 001-mesa-imersiva).
-- Atualizada ao implementar feedback e persistùncia (feature 003-feedback-persistencia).
-- Atualizada ao implementar o avaliador da mùo atual (feature 004-mao-atual): motor stateless; sem persistir Melhor5/kickers.
+- Atualizada ao implementar feedback e persist?ncia (feature 003-feedback-persistencia).
+- Atualizada ao implementar o avaliador da m?o atual (feature 004-mao-atual): motor stateless; sem persistir Melhor5/kickers.
 - Atualizada ao implementar o enumerador de upgrades (feature 005-maos-ainda-possiveis): snapshot/runouts so em memoria; delta upgrade so das opcoes exibidas.
 - Atualizada ao implementar o showdown (feature 006-showdown-vencedor): MUST NOT persistir dump de `quemGanhou`, Melhor5 ou `chaveDesempate`.
-- Atualizada ao corrigir o layout responsivo: highlight de Melhor5 e street do HUD n„o saem do processo.
+- Atualizada ao corrigir o layout responsivo: highlight de Melhor5 e street do HUD n?o saem do processo.
+- Atualizada ao implementar a colinha de classificaÁ?o (feature 007-colinha-classificacao): estado de visita sÛ em memÛria; MUST NOT gravar prefer?ncia nem cartas-exemplo.

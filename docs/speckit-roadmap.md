@@ -85,6 +85,20 @@
 
 ---
 
+## P4 — Auxílio visual (consulta)
+
+### 007 — Colinha de classificação de mãos (PRD §5.7)
+
+```
+/speckit.specify Implementar a colinha de classificação das 10 categorias de Texas Hold’em no canto superior direito do desktop: overlay miniatura visível ao abrir, título Classificação de mãos, ordem RN-014 com rótulos exatos, cada linha com número + 5 cartas-exemplo fixas (extras esmaecidas, idioma visual da mesa, sem PNG de terceiros), ocultável na visita com botão Colinha no mesmo canto, sem localStorage/sessionStorage da preferência (reload restaura visível), estática em relação ao quiz (não destaca a mão da mesa, clique não responde), ausente em viewport ≤900 px, fail-open se o overlay falhar — conforme PRD §5.7 (RN-048, RN-049, RN-050, RN-051, RN-052, RN-053, RN-054, CA-028, CA-029, CA-030, CA-031, CA-032)
+/speckit-clarify
+/speckit-plan
+/speckit-tasks
+/speckit-implement
+```
+
+---
+
 ## Mapa: ordem de execução × seção PRD
 
 | Ordem | Feature | Seção PRD | Diretório esperado |
@@ -95,13 +109,14 @@
 | 004 | Identificação da mão atual (flop e turn) | §5.3 | `specs/004-mao-atual/` |
 | 005 | Identificação de mãos ainda possíveis | §5.4 | `specs/005-maos-ainda-possiveis/` |
 | 006 | Showdown (inclui a única mão do herói no river) | §5.5 | `specs/006-showdown-vencedor/` |
+| 007 | Colinha de classificação de mãos | §5.7 | `specs/007-colinha-classificacao/` |
 
 > Os nomes dos diretórios em `specs/` são sugestivos — o Spec Kit gera o prefixo numérico e o slug automaticamente no `/speckit-specify`.
 
 ## Notas
 
-- **Ordem vs. numeração PRD:** §5.6 (feedback e persistência) permanece **003**, antes de §5.3–§5.5, porque toda pergunta consome o contrato de retry, estados de opção, RN-G008 e contadores. §5.3 no roadmap **não** implementa o river do herói — isso é o 006, para não duplicar a pergunta (CA-027).
+- **Ordem vs. numeração PRD:** §5.6 (feedback e persistência) permanece **003**, antes de §5.3–§5.5, porque toda pergunta consome o contrato de retry, estados de opção, RN-G008 e contadores. §5.3 no roadmap **não** implementa o river do herói — isso é o 006, para não duplicar a pergunta (CA-027). §5.7 (colinha) entra como **007** no fim: depende só do casco da 5.1 e não bloqueia o quiz; as specs 001–006 já existem e **não** foram renumeradas (CR-001).
 - **Regras globais:** RN-G001 a RN-G008 aplicam-se a todas as specs; cada `/speckit-plan` deve validá-las no Constitution Check.
 - **ADRs a respeitar no plan:** [ADR-001](./adr/ADR-001-entrega-estatica-github-pages.md) Pages/sem backend; [ADR-002](./adr/ADR-002-persistencia-localstorage.md) localStorage; [ADR-003](./adr/ADR-003-motor-avaliacao-maos.md) motor próprio; [ADR-004](./adr/ADR-004-embaralhamento-webcrypto-pool.md) shuffle; [ADR-005](./adr/ADR-005-cartas-html-css-svg.md) cartas DOM; [ADR-006](./adr/ADR-006-es-modules-sem-bundler.md) módulos; [ADR-007](./adr/ADR-007-webaudio-sintetizado.md) Web Audio.
 - **`/speckit-clarify`:** use quando a spec tiver `[NEEDS CLARIFICATION]`; se a spec já estiver completa, o comando pode encerrar rápido.
-- **Documentos relacionados:** [context.md](./context.md) · [prd.md](./prd.md) · [adr/](./adr/) · [changes/](./changes/)
+- **Documentos relacionados:** [context.md](./context.md) · [prd.md](./prd.md) · [adr/](./adr/) · [CR-001](./changes/CR-001.md)

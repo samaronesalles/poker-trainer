@@ -28,6 +28,7 @@ function svgNaipe(suit) {
 }
 
 function papelDataset(papel) {
+  if (papel === 'exemplo') return 'exemplo';
   if (papel === 'comunitaria') return 'community';
   if (papel === 'burn_cenico') return 'burn';
   return 'hole';
