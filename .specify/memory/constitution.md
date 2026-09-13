@@ -1,33 +1,27 @@
 <!--
 Sync Impact Report
 ==================
-Version change: unversioned template placeholder → 1.0.0
-Bump rationale: first ratification. Placeholder tokens replaced with
-Poker Trainer non-negotiable principles. MAJOR 1.0.0 (initial adoption).
+Version change: 1.0.0 → 1.1.0
+Bump rationale: CR-002. MINOR — o MVP passa a treinar outs e odd da
+próxima carta (sem Pot Odds, sem aposta). Princípio II ganha buckets
+`outs` e `odds`. Princípio IV deixa de vetar essa matemática de
+equidade; continua vetando call/fold/Pot Odds/draws nomeados como
+rótulo. RN-G002 inclui a §5.8 quando a §5.4 não for skip. ADR-002 e
+ADR-003 emendados (mesma stack).
 
-Modified principles (template slot → ratified title):
-- [PRINCIPLE_1_NAME] → I. Idioma em português brasileiro
-- [PRINCIPLE_2_NAME] → II. Privacidade local e LGPD (NON-NEGOTIABLE)
-- [PRINCIPLE_3_NAME] → III. Custo zero operacional
-- [PRINCIPLE_4_NAME] → IV. Escopo MVP: treino de leitura, não jogo
-- [PRINCIPLE_5_NAME] → V. Regras globais de treino RN-G001..RN-G008 (NON-NEGOTIABLE)
-  Template had five principle slots; two more were added from product gates:
-- (added) VI. Desktop-first
-- (added) VII. Fail-open: a mesa não trava
+Modified principles:
+- II. Privacidade local: persistidos `mao_atual`, `upgrade`,
+  `vencedor_pote`, `outs`, `odds` (ainda só contadores, sem PII).
+- IV. Escopo MVP: leitura de categoria + outs/odd; Pot Odds e
+  decisão de pagar continuam fora.
+- V. RN-G002: flop/turn = mão atual + (upgrades vencedores ou skip)
+  + (§5.8 só se houve 5.4).
 
-Added sections:
-- Contrato Técnico (ADRs 001–007)
-- Constitution Check
+Added sections: none
+Removed sections: none
+Follow-up TODOs: spec 008 via Spec Kit; converge 003/005.
 
-Removed sections: none (template SECTION_2 / SECTION_3 slots filled)
-
-Follow-up TODOs: none
-
-Recorded choices (ambiguous → default):
-- Constitution language: pt-BR (matches PRD, context, ADRs, product UI).
-- Ratification date: 2026-09-07 (same day as context/PRD/ADR set).
-- Constitution Check validates RN-G001 through RN-G008, not only G001–G006
-  (roadmap: all eight apply to every spec; G007/G008 are applicable globals).
+Previous report (1.0.0): first ratification 2026-09-07.
 -->
 
 # Poker Trainer Constitution
@@ -58,9 +52,12 @@ MUST NOT coletar, solicitar ou persistir CPF, e-mail, nome real, apelido
 digitado pelo usuário, telefone, endereço ou qualquer identificador pessoal.
 
 O único dado persistido MUST ser contadores de desempenho de treino
-(`mao_atual`, `upgrade`, `vencedor_pote`: acertos, erros e exposições da
-primeira tentativa, por categoria quando aplicável), exclusivamente no
-`localStorage` da origem do app no navegador do usuário.
+(`mao_atual`, `upgrade`, `vencedor_pote`, `outs`, `odds`: acertos, erros
+e exposições da primeira tentativa, por categoria quando aplicável;
+`outs` e `odds` são grupos únicos), exclusivamente no `localStorage` da
+origem do app no navegador do usuário. MUST NOT persistir cartas, vilão
+assumido, lista de outs, ranks, razão, information set nem dump de
+comparação.
 
 MUST NOT enviar mãos, respostas, contadores, telemetria pessoal ou qualquer
 payload a servidor. Não há backend; não há analytics de identificação; não há
@@ -89,28 +86,35 @@ custo e superfície sem servir o escopo.
 ### IV. Escopo MVP: treino de leitura, não jogo
 
 O produto é um treinador **single-player** de leitura de mãos de Texas
-Hold’em (herói + dois adversários). A tela principal MUST ser uma mesa
-imersiva (feltro, cartas, assentos, HUD integrado) — nunca um quiz escolar
-ao lado de um baralho.
+Hold’em (herói + dois adversários): categoria já feita, categorias que
+ainda **vencem o pote** contra um vilão assumido, outs da próxima carta
+e a odd (regra do 2). A tela principal MUST ser uma mesa imersiva
+(feltro, cartas, assentos, HUD integrado) — nunca um quiz escolar ao
+lado de um baralho.
 
 MUST NOT no MVP:
 
-- apostas, blinds, raises, fold, side pots ou decisão de estratégia
+- apostas, blinds, raises, fold, side pots ou decisão de **pagar** (Pot
+  Odds, call/fold, preço do pote)
+- regra do 4 (equidade flop→river / all-in)
 - quiz preflop (RN-041)
 - multiplayer, contas, lobby ou adversários que “jogam”
 - tela de relatório, gráfico, ranking ou tabela de desempenho
 - botão de zerar evolução (limpar dados do site no navegador basta)
 - controle de mute/volume na UI
 - CTA “Desistir” / “Nova mão” no meio da mão (abandonar = recarregar)
-- draws nomeados, enunciados com kickers ou “par de ases”
+- draws nomeados **como rótulo de opção** (flush draw, gutshot,
+  overcards); enunciados com kickers ou “par de ases” no quiz de
+  categoria
 - outras variantes (Omaha, Stud, short deck), mais de três jogadores
 - app nativo ou “cola” para mesa ao vivo
 
-Pós-MVP (relatório, draws, sync) exige emenda a esta constitution e ADRs
-novos — não entra por atalho numa spec.
+Pós-MVP (relatório, Pot Odds, draws nomeados, sync, regra do 4) exige
+emenda a esta constitution e ADRs novos — não entra por atalho numa spec.
 
-**Rationale:** o treino existe para gravar leitura na cadência da mesa;
-aposta, conta e dashboard desviam atenção e violam custo/LGPD.
+**Rationale:** o treino existe para gravar leitura e contagem de outs na
+cadência da mesa; aposta, conta e dashboard desviam atenção e violam
+custo/LGPD. Outs/odd são leitura de equidade, não decisão de pagar.
 
 ### V. Regras globais de treino RN-G001..RN-G008 (NON-NEGOTIABLE)
 
@@ -122,8 +126,9 @@ mínimo testável.
   quizzes do river.
 - **RN-G002:** MUST NOT avançar de street enquanto as perguntas da street
   não estiverem acertadas. Flop/turn = identificação da mão atual +
-  (upgrades ou skip). River = as quatro perguntas do showdown (sem
-  pergunta de upgrade).
+  (upgrades que vencem o pote ou skip) + (outs e odd só se a pergunta
+  de upgrades não foi skip). River = as quatro perguntas do showdown
+  (sem pergunta de upgrade, outs ou odd).
 - **RN-G003:** Empates de pote fazem parte do treino. O gerador MUST NOT
   evitar boards que empatam.
 - **RN-G004:** Kickers decidem o pote no motor e MUST NEVER aparecer como
@@ -177,8 +182,8 @@ sem emenda desta constitution e novo ADR.
 | ADR | Contrato |
 |-----|----------|
 | **ADR-001** | Entrega estática no GitHub Pages; sem backend, sem API, sem auth. |
-| **ADR-002** | Evolução só em `localStorage` (JSON). Sem IndexedDB, sem nuvem, sem `sessionStorage` como banco. Sem chave de zerar na UI. |
-| **ADR-003** | Motor próprio em JavaScript no cliente (melhor 5, kickers, empates, enumeração de upgrades no information set do herói). MUST NOT depender de lib de poker em runtime (CDN ou vendored). |
+| **ADR-002** | Evolução só em `localStorage` (JSON). Buckets `mao_atual`, `upgrade`, `vencedor_pote`, `outs`, `odds`. Sem IndexedDB, sem nuvem, sem `sessionStorage` como banco. Sem chave de zerar na UI. |
+| **ADR-003** | Motor próprio em JavaScript no cliente (melhor 5, kickers, empates, vilão assumido, upgrades que vencem o pote na próxima carta, outs e odd). MUST NOT depender de lib de poker em runtime (CDN ou vendored). |
 | **ADR-004** | Shuffle Fisher–Yates com `crypto.getRandomValues` misturado a pool (cursor, data/hora, tick). Uma permutação por mão; 11 cartas de jogo via RN-044; burns visuais não consomem carta. |
 | **ADR-005** | Cartas HTML/CSS com naipes SVG; flip/deal em CSS. MUST NOT usar Unicode de baralho (U+1F0A0…) nem emoji como carta principal. |
 | **ADR-006** | `index.html` + CSS + ES modules por domínio (`mesa`, `carta`, `baralho`, `motor`, `quiz`, `storage`, `audio`). MUST NOT exigir bundler (webpack/vite) no MVP. |
@@ -242,4 +247,4 @@ da entrega atual.
 na ordem do `docs/speckit-roadmap.md`. Este comando de constitution NÃO
 implementa código da aplicação.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-07 | **Last Amended**: 2026-09-07
+**Version**: 1.1.0 | **Ratified**: 2026-09-07 | **Last Amended**: 2026-09-13

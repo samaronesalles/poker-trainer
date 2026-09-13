@@ -1,11 +1,11 @@
 # Context — Poker Trainer
 
 > Documento de visão macro. Descreve **por quê** o sistema existe, não **como** implementá-lo.
-> Última atualização: 2026-09-07 (CR-001 — colinha de classificação)
+> Última atualização: 2026-09-13 (CR-002 — desconto de outs e odd)
 
 ## Objetivo geral
 
-O Poker Trainer é um treinador de **leitura de mãos** de Texas Hold’em no navegador. Simula uma mesa online com três jogadores para o usuário praticar, em múltipla escolha, identificar a **categoria** da mão que já tem, as categorias ainda possíveis de completar (só mudança de categoria, não “par mais forte”) e, no showdown, as mãos de todos e quem leva o pote — até essa leitura ficar rápida o bastante para uma mesa presencial. Não há perguntas antes do flop.
+O Poker Trainer é um treinador de **leitura de mãos e de outs** de Texas Hold’em no navegador. Simula uma mesa online com três jogadores para o usuário praticar, em múltipla escolha, identificar a **categoria** da mão que já tem, as categorias que ainda podem **virar o pote** contra um vilão assumido com postura pessimista (desconto de outs — só mudança de categoria que vence, não “par mais forte” no chip), depois **quantas outs**, **quais ranks** e a **odd** da próxima carta, e no showdown as mãos de todos e quem leva o pote — até essa leitura ficar rápida o bastante para uma mesa presencial. Não há perguntas antes do flop. Pot Odds não entra neste recorte.
 
 ## Contexto de negócio
 
@@ -15,7 +15,7 @@ O produto nasce de uma necessidade pessoal, não de um mercado a explorar neste 
 
 Na mesa ao vivo, duas falhas se repetem:
 
-1. **No flop (e no turn):** o dealer espalha as comunitárias e o jogador não consegue, com rapidez, dizer qual mão já completou nem quais categorias ainda pode completar se vierem o turn e o river.
+1. **No flop (e no turn):** o dealer espalha as comunitárias e o jogador não consegue, com rapidez, dizer qual mão já completou, quais categorias ainda **vencem o adversário** se vier a próxima carta, nem contar outs e a odd — em vez de “torcer” por qualquer melhoria.
 2. **No showdown:** as mãos abrem e o jogador não identifica depressa o que cada um formou — inclusive a própria mão. Fica dependente do dealer humano, que pode errar ou, em mesas sem profissional, de jogadores que “decidem” o pote. Sem a habilidade de leitura, ele não consegue questionar e pode ser prejudicado.
 
 O treino precisa parecer **mesa**, não prova escolar: o cérebro deve ensaiar o mesmo contexto visual (feltro, cartas, posições) em que a habilidade será usada.
@@ -30,7 +30,7 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 
 ## Proposta de valor
 
-- Treino repetível de leitura de mão **na mesma cadência da mesa** (flop → turn → river → showdown), sem apostas para não desviar a atenção.
+- Treino repetível de leitura de mão e de outs **na mesma cadência da mesa** (flop → turn → river → showdown), sem apostas para não desviar a atenção.
 - Feedback imediato com nova chance até acertar, para gravar o padrão certo — e estatística pela **primeira tentativa**, para medir habilidade real.
 - O quiz pede só a categoria; o motor usa ranking completo (kickers e empates) para o pote.
 - Experiência visual de poker online, para transferir o treino para a mesa presencial.
@@ -42,7 +42,7 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 
 - Simulação de uma mão de Texas Hold’em com o herói e dois adversários (sem quiz preflop).
 - Embaralhamento de alta entropia e distribuição das cartas a cada rodada (11 cartas de jogo; burn só visual).
-- Flop e turn: mão atual (uma categoria) + mãos ainda possíveis (múltipla seleção).
+- Flop e turn: mão atual (uma categoria) + categorias que ainda podem virar o pote (múltipla seleção, desconto de outs) +, se essa lista não for vazia, quantas outs, quais ranks e a odd da próxima carta.
 - River/showdown: uma vez a mão do herói, a de cada adversário e quem ganha o pote (incluindo empate).
 - Cartas dos adversários ocultas até o river.
 - Feedback de acerto/erro; opção errada desabilitada; nova tentativa até acertar; só a 1ª tentativa vale na evolução.
@@ -55,8 +55,9 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 
 - Apostas, blinds, raises, fold, side pots e qualquer decisão de estratégia.
 - Quiz preflop; desistir da mão em curso (exceto recarregar a página).
-- Draws nomeados (flush draw, gutshot, open-ended, overcards) — o treino usa só a **categoria** (rótulos canônicos do PRD).
-- Kickers e enunciados do tipo “par de ases”; melhorar *dentro* da mesma categoria não é pergunta.
+- Draws nomeados (flush draw, gutshot, open-ended, overcards) como **rótulo de opção** — o treino de categoria usa só os rótulos canônicos do PRD; outs se pedem por **quantidade** e **rank** (Ás…2), não por nome de draw.
+- Kickers e enunciados do tipo “par de ases” no quiz de categoria; melhorar *dentro* da mesma categoria **não** vira chip — essas cartas só entram na pergunta de outs.
+- Pot Odds, regra do 4 (flop→river / all-in), call/fold e qualquer preço do pote.
 - Relatório visual, botão de zerar stats, mute/volume na UI.
 - Multiplayer, contas, login, sincronização entre dispositivos.
 - Outras variantes (Omaha, Stud, short deck); mais de três jogadores; torneios.
@@ -66,8 +67,10 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 
 ### Futuro (pós-MVP, sem compromisso)
 
-- Relatório de evolução por categoria de mão (acerto na primeira tentativa, volume, tendência).
+- Relatório de evolução por categoria de mão (acerto na primeira tentativa, volume, tendência) e pelos buckets `outs` / `odds`.
+- Pot Odds e decisão de pagar ou não a aposta.
 - Draws nomeados como modo de treino extra.
+- Regra do 4 (equidade flop→river / all-in).
 - Granularidade com ranking (“par de ases”) e kickers.
 - Mais adversários, posições e tipos de board.
 - Som/tema configuráveis; modo rápido (cronômetro visível).
@@ -99,7 +102,7 @@ Não há papéis de administrador, professor ou multi-usuário no MVP.
 
 ## Dados e privacidade
 
-Não há cadastro, e-mail, nome real nem identificadores pessoais. O que permanece no dispositivo são contadores de desempenho de treino (categorias de mão). Não há envio a servidor. Limpar os dados do site no navegador apaga a evolução.
+Não há cadastro, e-mail, nome real nem identificadores pessoais. O que permanece no dispositivo são contadores de desempenho de treino (categorias, outs e odd). Cartas, vilão assumido, lista de outs e information set **não** persistem. Não há envio a servidor. Limpar os dados do site no navegador apaga a evolução.
 
 ## Documentos relacionados
 
@@ -113,7 +116,7 @@ Não há cadastro, e-mail, nome real nem identificadores pessoais. O que permane
   - [ADR-005 — Cartas HTML/CSS + SVG](adr/ADR-005-cartas-html-css-svg.md)
   - [ADR-006 — ES modules sem bundler](adr/ADR-006-es-modules-sem-bundler.md)
   - [ADR-007 — Web Audio sintetizado](adr/ADR-007-webaudio-sintetizado.md)
-- Change Requests: [CR-001 — Colinha de classificação de mãos](changes/CR-001.md)
+- Change Requests: [CR-001 — Colinha de classificação de mãos](changes/CR-001.md) · [CR-002 — Desconto de outs e odd](changes/CR-002.md)
 
 ## Histórico de revisões
 
@@ -122,3 +125,4 @@ Não há cadastro, e-mail, nome real nem identificadores pessoais. O que permane
 | 2026-09-07 | Samarone Salles | Criação inicial |
 | 2026-09-07 | Samarone Salles | Revisão de consistência com o PRD (preflop, river uma vez, burns, labels, limites de UI) |
 | 2026-09-07 | Samarone Salles | CR-001: colinha de classificação no desktop (escopo MVP); cola ao vivo continua fora |
+| 2026-09-13 | Samarone Salles | CR-002: §5.4 passa a cobrar só categorias que vencem o vilão assumido; §5.8 outs (quantas + ranks) e odd; Pot Odds fora |

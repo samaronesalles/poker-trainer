@@ -1,8 +1,8 @@
 # ADR-002: Persistência da evolução no localStorage do navegador
 
-**Status:** Aceito  
+**Status:** Aceito (emendado em 2026-09-13 — CR-002)  
 **Data:** 2026-09-07  
-**Decisor:** Usuário (pré-decidido na entrevista de kickoff)  
+**Decisor:** Usuário (pré-decidido na entrevista de kickoff; buckets extras confirmados na Evolução CR-002)  
 **Recomendação do agente:** localStorage — único armazenamento que atende “banco no navegador”, CA-023 e RN-039 sem servidor.
 
 ### Requisitos que fundamentam a decisão
@@ -10,7 +10,7 @@
 | ID / Origem | Tipo | Como influenciou a análise |
 |-------------|------|----------------------------|
 | Entrevista | Funcional | Usar o localStorage como “banco” da evolução |
-| RN-037, RN-040 | Funcional | Contadores por categoria e tipo de pergunta, suficientes para relatório futuro |
+| RN-037, RN-040, RN-067 | Funcional | Contadores por categoria e tipo de pergunta (`outs`, `odds` inclusos no CR-002), suficientes para relatório futuro |
 | RN-019, RN-024, RN-026 | Funcional | Só a primeira tentativa altera contadores |
 | RN-039 | Funcional | Sem nome, e-mail ou identificador pessoal |
 | CA-022, CA-023 | Funcional | Erro-depois-acerto não vira acerto; reload preserva Flush |
@@ -39,7 +39,7 @@ A seção 5.6 exige memória da facilidade por tipo de mão e proíbe relatório
 
 **Escolha do usuário:** localStorage do navegador como banco da evolução.
 
-Os contadores de `mao_atual`, `upgrade` e `vencedor_pote` (acertos/erros/exposições na primeira tentativa) ficam em JSON no localStorage da origem do app. No MVP, **exposições = acertos + erros** daquele bucket (PRD RN-037). Falso positivo em upgrade (distratora marcada) incrementa **erro** daquela categoria; distratora não marcada não incrementa (RN-024). Não há chave de “zerar” na UI. Não há sync. Dados corrompidos são descartados e zerados sem quebrar a mesa.
+Os contadores de `mao_atual`, `upgrade`, `vencedor_pote`, `outs` e `odds` (acertos/erros/exposições na primeira tentativa) ficam em JSON no localStorage da origem do app, chave `poker-trainer:evolucao`. No MVP, **exposições = acertos + erros** daquele bucket (PRD RN-037). Falso positivo em upgrade (distratora marcada) incrementa **erro** daquela categoria; distratora não marcada não incrementa (RN-024). `outs` e `odds` são grupos únicos (não por categoria). MUST NOT gravar cartas, vilão assumido, N, ranks nem a razão. Não há chave de “zerar” na UI. Não há sync. Dados corrompidos são descartados e zerados sem quebrar a mesa. A stack **não** mudou (CR-002 só amplia o JSON).
 
 ### Consequências
 
@@ -58,6 +58,7 @@ Os contadores de `mao_atual`, `upgrade` e `vencedor_pote` (acertos/erros/exposi�
 
 ### Relacionados
 
-- PRD: [docs/prd.md](../prd.md) §5.6
+- PRD: [docs/prd.md](../prd.md) §5.6, §5.8
+- CR: [CR-002](../changes/CR-002.md)
 - context.md: Dados e privacidade
 - ADRs: [ADR-001](ADR-001-entrega-estatica-github-pages.md)

@@ -61,7 +61,7 @@
 
 ---
 
-### 005 — Identificação de mãos ainda possíveis (PRD §5.4)
+### 005 — Identificação de mãos ainda possíveis (PRD §5.4 — **versão original; comportamento substituído pelo CR-002 / 008**)
 
 ```
 /speckit.specify Implementar no flop e no turn, só após a 5.3 acertada, a múltipla seleção de upgrades: categoria C possível se existe runout no information set do herói (47 no flop, 46 no turn) cuja melhor mão é exatamente C e C é estritamente mais forte; 1–5 upgrades + distratoras até 6, ou os 6 mais fortes sem distratora; upgrades que não couberam não são cobrados; skip + Continuar se lista vazia; estatística RN-024 na primeira Confirmar — conforme PRD §5.4 (RN-020, RN-021, RN-022, RN-023, RN-024, RN-025, RN-026, RN-027, CA-014, CA-015, CA-016, CA-017)
@@ -70,6 +70,8 @@
 /speckit-tasks
 /speckit-implement
 ```
+
+> **CR-002:** a pasta `specs/005-maos-ainda-possiveis/` permanece histórica (já implementada). O gabarito novo da §5.4 (desconto de outs) **não** se reabre aqui — entra no bloco **008**.
 
 ---
 
@@ -99,6 +101,20 @@
 
 ---
 
+## P5 — Equidade da próxima carta
+
+### 008 — Upgrades que vencem o pote + outs e odd (PRD §5.4 revista + §5.8)
+
+```
+/speckit.specify Substituir o gabarito da §5.4: depois da 5.3 no flop/turn, perguntar “Quais mãos melhoram o seu jogo com chance de ganhar o pote?” só com categorias que, na próxima carta, são exatamente C, mais fortes que a atual e vencem estritamente o vilão assumido (receita pessimista RN-055, HUD declara a suposição, hole reais de A/B fora); skip “Não há mão que vire o pote.” sem §5.8; se acertar a 5.4, perguntar quantas outs (6 totais), quais ranks (sempre 13) e qual odd (regra do 2, tabela X:1); buckets outs e odds na mesma chave; sem Pot Odds, sem regra do 4, sem persistir cartas/vilão/outs — conforme PRD §5.4 revista e §5.8 (RN-055, RN-056, RN-057, RN-059, RN-060, RN-061, RN-062, RN-063, RN-064, RN-065, RN-066, RN-067, RN-068, RN-069, RN-070, RN-071, RN-074, CA-033, CA-034, CA-035, CA-036, CA-037, CA-038, CA-039, CA-040, CA-041, CA-042, CA-043, CA-044, CA-045, CA-046, CA-047, CA-048) e converge de storage da 003
+/speckit-clarify
+/speckit-plan
+/speckit-tasks
+/speckit-implement
+```
+
+---
+
 ## Mapa: ordem de execução × seção PRD
 
 | Ordem | Feature | Seção PRD | Diretório esperado |
@@ -107,16 +123,18 @@
 | 002 | Embaralhamento e distribuição das cartas | §5.2 | `specs/002-embaralhamento-deal/` |
 | 003 | Feedback de resposta e persistência da evolução | §5.6 | `specs/003-feedback-persistencia/` |
 | 004 | Identificação da mão atual (flop e turn) | §5.3 | `specs/004-mao-atual/` |
-| 005 | Identificação de mãos ainda possíveis | §5.4 | `specs/005-maos-ainda-possiveis/` |
+| 005 | Identificação de mãos ainda possíveis (histórico) | §5.4 original | `specs/005-maos-ainda-possiveis/` |
 | 006 | Showdown (inclui a única mão do herói no river) | §5.5 | `specs/006-showdown-vencedor/` |
 | 007 | Colinha de classificação de mãos | §5.7 | `specs/007-colinha-classificacao/` |
+| 008 | Upgrades que vencem o pote + outs e odd | §5.4 revista + §5.8 | `specs/008-…` |
 
 > Os nomes dos diretórios em `specs/` são sugestivos — o Spec Kit gera o prefixo numérico e o slug automaticamente no `/speckit-specify`.
 
 ## Notas
 
-- **Ordem vs. numeração PRD:** §5.6 (feedback e persistência) permanece **003**, antes de §5.3–§5.5, porque toda pergunta consome o contrato de retry, estados de opção, RN-G008 e contadores. §5.3 no roadmap **não** implementa o river do herói — isso é o 006, para não duplicar a pergunta (CA-027). §5.7 (colinha) entra como **007** no fim: depende só do casco da 5.1 e não bloqueia o quiz; as specs 001–006 já existem e **não** foram renumeradas (CR-001).
+- **Ordem vs. numeração PRD:** §5.6 (feedback e persistência) permanece **003**, antes de §5.3–§5.5, porque toda pergunta consome o contrato de retry, estados de opção, RN-G008 e contadores. §5.3 no roadmap **não** implementa o river do herói — isso é o 006, para não duplicar a pergunta (CA-027). §5.7 (colinha) entra como **007**: depende só do casco da 5.1 e não bloqueia o quiz; as specs 001–007 já existem e **não** foram renumeradas (CR-001). A §5.8 e a **revisão da §5.4** entram como **008** no fim (CR-002): dependem do motor 004/005/006 e do contrato 003; a pasta 005 **não** se renumera — o gabarito antigo fica histórico.
+- **Por que 008 no fim e não no lugar da 005:** a 005 já foi implementada; reabrir o número quebraria a pasta `specs/005-maos-ainda-possiveis/`. A ordem de execução **deveria** ser “corrigir 5.4 antes de pedir outs”, e isso está **dentro** do próprio bloco 008 (pré-requisito no specify), não numa spec 005b.
 - **Regras globais:** RN-G001 a RN-G008 aplicam-se a todas as specs; cada `/speckit-plan` deve validá-las no Constitution Check.
 - **ADRs a respeitar no plan:** [ADR-001](./adr/ADR-001-entrega-estatica-github-pages.md) Pages/sem backend; [ADR-002](./adr/ADR-002-persistencia-localstorage.md) localStorage; [ADR-003](./adr/ADR-003-motor-avaliacao-maos.md) motor próprio; [ADR-004](./adr/ADR-004-embaralhamento-webcrypto-pool.md) shuffle; [ADR-005](./adr/ADR-005-cartas-html-css-svg.md) cartas DOM; [ADR-006](./adr/ADR-006-es-modules-sem-bundler.md) módulos; [ADR-007](./adr/ADR-007-webaudio-sintetizado.md) Web Audio.
 - **`/speckit-clarify`:** use quando a spec tiver `[NEEDS CLARIFICATION]`; se a spec já estiver completa, o comando pode encerrar rápido.
-- **Documentos relacionados:** [context.md](./context.md) · [prd.md](./prd.md) · [adr/](./adr/) · [CR-001](./changes/CR-001.md)
+- **Documentos relacionados:** [context.md](./context.md) · [prd.md](./prd.md) · [adr/](./adr/) · [CR-001](./changes/CR-001.md) · [CR-002](./changes/CR-002.md) · [outs-and-odds](./studies/outs-and-odds.md)

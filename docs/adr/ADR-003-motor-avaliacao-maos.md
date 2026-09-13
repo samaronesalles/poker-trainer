@@ -1,9 +1,9 @@
 # ADR-003: Motor próprio de avaliação de mãos em JavaScript no cliente
 
-**Status:** Aceito  
+**Status:** Aceito (emendado em 2026-09-13 — CR-002)  
 **Data:** 2026-09-07  
-**Decisor:** Usuário (escolha registrada na entrevista de arquitetura)  
-**Recomendação do agente:** Motor próprio em JS no cliente — avalia 5 cartas, kickers e empates, e enumera o baralho restante para “ainda possível”.
+**Decisor:** Usuário (escolha registrada na entrevista de arquitetura; extensão do enumerador confirmada na Evolução CR-002)  
+**Recomendação do agente:** Motor próprio em JS no cliente — avalia 5 cartas, kickers e empates, sintetiza o vilão assumido e enumera a próxima carta para upgrades que vencem o pote, outs e odd.
 
 ### Requisitos que fundamentam a decisão
 
@@ -11,7 +11,7 @@
 |-------------|------|----------------------------|
 | RN-013 | Funcional | Melhor 5 cartas entre as disponíveis na street |
 | RN-014, RN-015 | Funcional | Taxonomia de 10 categorias; royal distinta de straight flush |
-| RN-020, RN-023 | Funcional | Upgrade = categoria estritamente mais forte ainda atingível com cartas que o herói **não vê** |
+| RN-020 (substituído), RN-055–RN-057, RN-061, RN-065 | Funcional | Upgrade vencedor e outs = próxima carta que deixa o herói **estritamente superior** ao vilão assumido; odd pela regra do 2 |
 | RN-028 | Funcional | Hold’em 2 hole + 5 comunitárias por jogador no showdown |
 | RN-029, RN-G004 | Funcional | Vencedor com ranking completo, kickers e empate verdadeiro; kickers não aparecem no quiz |
 | CA-010, CA-019, CA-020 | Funcional | Par, flush e pote dividido têm de sair corretos |
@@ -23,7 +23,7 @@
 
 ### Contexto
 
-Bibliotecas de poker resolvem bem “qual a melhor mão de 7 cartas?”. O PRD exige isso **e** uma pergunta que elas não fazem: entre as categorias RN-014 mais fortes que a atual, quais ainda existem no baralho **desconhecido do herói** (52 − hole do herói − board), com 1 ou 2 cartas por vir. Esse enumerador é regra de produto. O espaço é pequeno (combinações de turn/river restantes cabem no browser). Um wrapper em cima de lib ainda teria de reimplementar RN-020/RN-023 e o mapeamento das 10 categorias em português.
+Bibliotecas de poker resolvem bem “qual a melhor mão de 7 cartas?”. O PRD exige isso **e** perguntas que elas não fazem: (1) a receita pessimista do vilão assumido (RN-055); (2) quais categorias ainda **vencem** esse vilão na **próxima carta**; (3) o conjunto de outs limpos e a odd X:1. Esse enumerador é regra de produto. O espaço é pequeno (uma carta por vir). Um wrapper em cima de lib ainda teria de reimplementar RN-055–RN-065 e o mapeamento das 10 categorias em português. A escolha de stack (motor próprio, sem lib) **não** mudou no CR-002.
 
 ### Opções consideradas
 
@@ -36,15 +36,15 @@ Bibliotecas de poker resolvem bem “qual a melhor mão de 7 cartas?”. O PRD e
 
 ### Decisão
 
-**Escolha do usuário:** Motor próprio em JS no cliente: avalia 5 cartas, kickers e empates, e enumera o baralho restante para “ainda possível” (Recomendado).
+**Escolha do usuário:** Motor próprio em JS no cliente (Recomendado). CR-002 **estende** o mesmo módulo; não abre nova decisão de lib.
 
 O cliente contém um módulo de domínio que:
 
 1. Classifica a melhor mão de 5 cartas na taxonomia RN-014 (rótulos canônicos), com desempate por kickers segundo RN-029. Inclui **wheel** (A-2-3-4-5, Ás baixo), **proíbe wrap** (K-A-2-3-4), distingue royal de straight flush, e permite 0/1/2 hole cards no turn/river (jogar a mesa).
-2. Compara três mãos de Hold’em (2+5) e declara vencedor único ou empate (dois ou três), inclusive quando o board joga para todos.
-3. No flop/turn, enumera o **information set do herói** (52 − hole do herói − board; adversários continuam “desconhecidos”). Flop: combinações de 2 entre 47; turn: 46 rios. Uma categoria C é upgrade se existe runout cuja **melhor** mão é **exatamente C** e C é estritamente mais forte que a atual — não “contém um flush” quando o best é royal.
+2. Compara três mãos de Hold’em (2+5) e declara vencedor único ou empate (dois ou três), inclusive quando o board joga para todos — **sempre com as hole reais** no showdown.
+3. No flop/turn, sintetiza o **vilão assumido** (RN-055) e enumera o **baralho da próxima carta** (52 − hole do herói − board − 2 assumidas). Uma categoria C é upgrade vencedor se existe próxima carta cuja melhor 5 do herói é **exatamente C**, C é mais forte que a atual, e o herói **vence estritamente** o assumido. Devolve também o conjunto de outs (cartas e ranks) e a odd RN-065. MUST NOT persistir snapshot, vilão, outs nem dump.
 
-Nenhuma biblioteca de poker é dependência de runtime. O mapeamento das 11 cartas (RN-044) é responsabilidade do baralho (ADR-004), não deste motor.
+Nenhuma biblioteca de poker é dependência de runtime. O mapeamento das 11 cartas (RN-044) é responsabilidade do baralho (ADR-004), não deste motor. As 2 cartas assumidas **não** são cartas de jogo.
 
 ### Consequências
 
@@ -63,5 +63,6 @@ Nenhuma biblioteca de poker é dependência de runtime. O mapeamento das 11 cart
 
 ### Relacionados
 
-- PRD: [docs/prd.md](../prd.md) §5.3, §5.4, §5.5
+- PRD: [docs/prd.md](../prd.md) §5.3, §5.4, §5.5, §5.8
+- CR: [CR-002](../changes/CR-002.md)
 - ADRs: [ADR-001](ADR-001-entrega-estatica-github-pages.md)

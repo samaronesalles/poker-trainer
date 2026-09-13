@@ -1,16 +1,16 @@
 # PRD — Poker Trainer
 
 > Fonte da verdade **funcional**. Descreve comportamento esperado, não arquitetura.
-> Última atualização: 2026-09-07 (CR-001 — §5.7 colinha)
+> Última atualização: 2026-09-13 (CR-002 — §5.4 desconto de outs + §5.8)
 > Contexto: [context.md](context.md)
 
 ## 1. Visão do produto
 
-O Poker Trainer é um simulador de **uma mesa de Texas Hold’em com três jogadores** cujo único jogo é a leitura. Não se aposta. Não se paga blind. Não se folda. A cada rodada o software embaralha, distribui, vira flop, turn e river e interroga o usuário em múltipla escolha: o que ele já tem, o que ainda pode ter, o que cada um completou no showdown e quem leva o pote.
+O Poker Trainer é um simulador de **uma mesa de Texas Hold’em com três jogadores** cujo único jogo é a leitura — de categoria, de outs e da odd da próxima carta. Não se aposta. Não se paga blind. Não se folda. A cada rodada o software embaralha, distribui, vira flop, turn e river e interroga o usuário em múltipla escolha: o que ele já tem, quais categorias ainda **viram o pote** contra um vilão assumido (desconto de outs), quantas outs e quais ranks, qual a odd, o que cada um completou no showdown e quem leva o pote.
 
 O usuário é um jogador amador que, na mesa presencial, congela na leitura. O produto existe para repetir esse instante — cartas no feltro, adversários sentados, comunitárias abrindo — até a identificação ficar automática. Por isso a interface **não pode parecer um quiz com baralho colado ao lado**: tem de parecer uma mesa de poker online, com o questionário integrado ao feltro, no mesmo lugar onde um client de poker colocaria ações ou o chat.
 
-O motor avalia mãos com ranking completo (incluindo kickers e empates) para decidir o pote com justiça. O treino visível ao usuário, no MVP, pede só a **categoria** da mão (par, flush, full house, etc.). Melhorar *dentro* da mesma categoria (par de 2 para par de Ás) **não** conta como upgrade no quiz.
+O motor avalia mãos com ranking completo (incluindo kickers e empates) para decidir o pote com justiça e para comparar o herói ao vilão assumido. O quiz de categoria pede só o **rótulo** RN-014. Melhorar *dentro* da mesma categoria (par de 2 para par de Ás) **não** vira chip na §5.4 — essas cartas só entram na pergunta de outs. Pot Odds não entra neste PRD.
 
 **Não há fase preflop de perguntas.** Depois do deal das hole cards, a mesa abre o flop e só então o HUD pergunta. No river, a mão do herói é perguntada **uma vez**, já no showdown (não se repete a pergunta da seção 5.3).
 
@@ -19,7 +19,8 @@ O motor avalia mãos com ranking completo (incluindo kickers e empates) para dec
 | Objetivo | Métrica | Meta |
 |----------|---------|------|
 | Acelerar identificação da mão feita | Acurácia na 1ª tentativa por categoria | Tendência de alta com o volume de mãos |
-| Acelerar leitura de upgrades possíveis | Acurácia na 1ª tentativa por categoria na pergunta de “ainda possível” | Tendência de alta |
+| Acelerar leitura de upgrades que vencem o pote | Acurácia na 1ª tentativa por categoria na pergunta da §5.4 (desconto de outs) | Tendência de alta |
+| Acelerar contagem de outs e odd | Acurácia na 1ª tentativa em `outs` (quantidade e ranks) e em `odds` | Tendência de alta |
 | Acelerar leitura de showdown | Acurácia na 1ª tentativa nas mãos dos três jogadores e no vencedor | Tendência de alta |
 | Manter imersão | A sessão inteira ocorre sobre a mesa, sem telas que “saiam do clube” | Fluxo flop → river sem quebrar o layout da mesa |
 
@@ -29,7 +30,7 @@ O motor avalia mãos com ranking completo (incluindo kickers e empates) para dec
 
 - Mesa visual de Texas Hold’em com herói + 2 adversários.
 - Embaralhamento de alta entropia e deal animado.
-- Quiz no flop, no turn e no river/showdown; múltipla escolha com até 6 opções (sempre tentando 6).
+- Quiz no flop, no turn e no river/showdown; categorias e odd em até 6 opções (sempre tentando 6); ranks de outs em 13 chips.
 - Retry até acertar, com opção errada desabilitada.
 - Persistência da evolução por categoria (1ª tentativa), sem tela de relatório.
 - Resultado da rodada + **Próxima mão**.
@@ -39,11 +40,12 @@ O motor avalia mãos com ranking completo (incluindo kickers e empates) para dec
 
 ### 3.2 Excluído
 
-- Qualquer ação de aposta ou estratégia (blinds, raise, fold, side pot).
+- Qualquer ação de aposta (blinds, raise, fold, side pot) e **Pot Odds** (preço do pote vs odd).
 - Quiz **preflop** (antes do flop abrir).
-- Draws nomeados (gutshot, flush draw, etc.).
-- Enunciado com kickers ou “par de ases”.
-- Upgrade *dentro* da mesma categoria (par mais forte, flush mais alto).
+- Draws nomeados como rótulo de opção (gutshot, flush draw, overcards).
+- Enunciado com kickers ou “par de ases” no quiz de **categoria**.
+- Chip de upgrade *dentro* da mesma categoria (par mais forte, flush mais alto) — o detalhe vai para a §5.8 (outs).
+- Regra do 4 (flop→river / all-in).
 - Relatório/gráficos de evolução; botão de zerar estatísticas (limpar dados do site no navegador basta). A colinha da §5.7 **não** é relatório nem ranking de desempenho.
 - Controle de mute/volume na UI (se o browser bloquear o áudio, a mesa segue muda).
 - Desistir da mão em curso (só completar ou recarregar a página).
@@ -69,20 +71,22 @@ flowchart TD
   deal[Deal: 2 hole a cada um]
   flopOpen[Abre flop]
   qHeroFlop["Quiz: mão atual do herói"]
-  qUpFlop["Quiz: upgrades do herói / ou skip"]
+  qUpFlop["Quiz: upgrades que vencem o pote / ou skip"]
+  qOutsFlop["Quiz: outs + odd (só se houve 5.4)"]
   turnOpen[Abre turn]
   qHeroTurn["Quiz: mão atual do herói"]
-  qUpTurn["Quiz: upgrades do herói / ou skip"]
+  qUpTurn["Quiz: upgrades que vencem o pote / ou skip"]
+  qOutsTurn["Quiz: outs + odd (só se houve 5.4)"]
   riverOpen[Abre river + vira adversários]
   qHeroRiver["Quiz: mão do herói"]
   qA["Quiz: mão do Adversário A"]
   qB["Quiz: mão do Adversário B"]
   qWin["Quiz: quem ganhou o pote"]
   result[Desfecho + Próxima mão]
-  idle --> deal --> flopOpen --> qHeroFlop --> qUpFlop --> turnOpen --> qHeroTurn --> qUpTurn --> riverOpen --> qHeroRiver --> qA --> qB --> qWin --> result --> deal
+  idle --> deal --> flopOpen --> qHeroFlop --> qUpFlop --> qOutsFlop --> turnOpen --> qHeroTurn --> qUpTurn --> qOutsTurn --> riverOpen --> qHeroRiver --> qA --> qB --> qWin --> result --> deal
 ```
 
-Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunta entre o deal e o flop.
+Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunta entre o deal e o flop. Se a lista da §5.4 for vazia, o fluxo do flop/turn vai ao skip (`sem_upgrade`) e **não** passa pelas perguntas de outs/odd.
 
 ---
 
@@ -98,15 +102,15 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 |--------|--------|---------------------|
 | `ociosa` | App aberto, após reload no meio da mão, ou após o usuário ainda não ter iniciado | Uma linha de propósito + CTA **Nova mão** |
 | `deal` | Cartas voando | Sem opções clicáveis (não dispara quiz em cima do deal) |
-| `perguntando` | Street aberta, quiz ativo | Enunciado + até 6 opções |
-| `sem_upgrade` | RN-020 vazio no flop/turn | Frase de que não há upgrade + **Continuar** |
+| `perguntando` | Street aberta, quiz ativo | Enunciado + opções (até 6 nas categorias/odd/quantidade; 13 ranks na §5.8) |
+| `sem_upgrade` | Lista da §5.4 vazia no flop/turn (RN-060) | Frase de que não há mão que vire o pote + **Continuar** |
 | `resultado` | Vencedor acertado | Quem levou o pote, as 3 categorias já identificadas, **Próxima mão** |
 
 **Fluxo principal:**
 1. O usuário abre o app e vê a mesa ociosa: três assentos ocupados, slots de comunitárias vazios, pote decorativo, CTA **Nova mão**.
 2. Ao iniciar, o deal das hole cards acontece na mesa (ver 5.2). **Ainda não há pergunta.**
-3. Em seguida abre o flop; só então o HUD entra em `perguntando` com o quiz do flop (5.3 → 5.4).
-4. Após o flop completo, abre o turn e o quiz do turn (5.3 → 5.4).
+3. Em seguida abre o flop; só então o HUD entra em `perguntando` com o quiz do flop (5.3 → 5.4 → 5.8 se a 5.4 não for skip).
+4. Após o flop completo, abre o turn e o quiz do turn (5.3 → 5.4 → 5.8 se a 5.4 não for skip).
 5. Após o turn completo, abre o river, as hole cards dos adversários viram no lugar (showdown) e o HUD segue a sequência 5.5.
 6. Ao acertar quem ganhou, o HUD vai a `resultado` e o botão **Próxima mão** inicia um novo deal na mesma mesa, sem reload perceptível da página.
 
@@ -268,36 +272,53 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 **Critérios de aceitação:**
 - [ ] CA-010: Dado o flop aberto, quando o herói tem um par como melhor mão, então a única opção correta é **Par**, e acertá-la de primeira registra acerto em Par (`mao_atual`).
 - [ ] CA-011: Dado um erro na primeira opção, quando o usuário clica de novo, então a opção errada está desabilitada, pediu-se nova tentativa, e `mao_atual` da categoria correta já tem +1 erro.
-- [ ] CA-012: Dado um acerto no flop, quando o feedback termina o beat, então segue a pergunta de upgrades (5.4) ou o skip de “sem upgrade” — não o turn ainda.
+- [ ] CA-012: Dado um acerto no flop, quando o feedback termina o beat, então segue a pergunta da §5.4 (upgrades que vencem o pote) ou o skip de “sem upgrade” — não o turn ainda e não a §5.8 antes da 5.4.
 - [ ] CA-013: Dado o quiz de categoria (flop, turn, ou qualquer uma das três mãos do §5.5), quando as opções aparecem, então há exatamente 6 rótulos distintos de RN-014, incluindo o correto, em ordem visual não constante.
 
 ---
 
-### 5.4 Identificação de mãos ainda possíveis (flop e turn)
+### 5.4 Identificação de mãos que ainda vencem o pote (flop e turn)
 
-**Objetivo:** Treinar **upgrades de categoria**: o que o herói **ainda não tem**, mas **ainda pode ter como melhor mão** com as cartas que faltam, usando só o que ele vê.
+**Objetivo:** Treinar **upgrades de categoria que viram o pote**: o que o herói ainda não tem, mas ainda pode ter como melhor mão na **próxima carta**, de modo a ficar **estritamente superior** ao vilão assumido (desconto de outs). Fonte pedagógica: [docs/studies/outs-and-odds.md](studies/outs-and-odds.md).
 
 **Não ocorre no river** (não resta carta).
 
+**RN-020 e CA-014–CA-017** (versão “ainda possível” sem vilão) estão **substituídos** por RN-055+ e CA-033+ (CR-002). Os códigos antigos não se reutilizam.
+
 **Fluxo principal:**
 1. Só depois da 5.3 da mesma street estar acertada.
-2. Se a lista de upgrades possíveis (RN-020) for vazia: HUD `sem_upgrade`, frase única, **Continuar** — sem estatística de categoria — e avança street.
-3. Senão pergunta: **“Quais mãos você ainda não tem, mas ainda pode formar?”**
-4. Até 6 opções (RN-023), múltipla seleção, ordem embaralhada (RN-G008). O usuário marca e aperta **Confirmar**.
-5. Avaliação RN-024/025 até o conjunto das opções **exibidas** estar correto.
-6. Feedback de acerto do conjunto e avança (turn ou river).
+2. O motor monta o vilão assumido (RN-055) e a lista de upgrades vencedores (RN-057) olhando **só a próxima carta**.
+3. Se a lista for vazia (já à frente ou drawing dead): HUD `sem_upgrade`, frase **“Não há mão que vire o pote.”**, **Continuar** — sem estatística `upgrade`, **sem** §5.8 — e avança street (RN-060).
+4. Senão pergunta: **“Quais mãos melhoram o seu jogo com chance de ganhar o pote?”** + a linha de suposição (RN-059).
+5. Até 6 opções (RN-023), múltipla seleção, ordem embaralhada (RN-G008). O usuário marca e aperta **Confirmar**.
+6. Avaliação RN-024/025 até o conjunto das opções **exibidas** estar correto.
+7. Feedback de acerto do conjunto e segue a **§5.8** da mesma street (não o turn/river ainda).
 
 **Regras de negócio:**
-- RN-020: Information set do herói = 52 − 2 hole do herói − comunitárias já abertas (flop: 47 desconhecidas; turn: 46). As hole cards dos adversários **não** são removidas: o herói não as vê, então entram no conjunto desconhecido (como outs ao vivo). Um upgrade da categoria C existe se e somente se **existe pelo menos um runout legal** desse conjunto tal que a **melhor** mão de 5 cartas do herói, após o runout, tenha categoria **exatamente C**, e C seja **estritamente mais forte** que a mão atual (RN-014).
-  - Flop: runout = todas as combinações de 2 cartas distintas entre as 47 (turn e river).
-  - Turn: runout = cada uma das 46 como river.
+- RN-055: Vilão assumido — **duas cartas concretas**, legais (não repetem hole do herói nem o board), escolhidas por receita pessimista. As hole reais de A e B **não** entram. O HUD declara a suposição; A e B permanecem fechados. Texturas aplicáveis (pode haver mais de uma):
+  - Board com **3 ou mais** cartas do mesmo naipe → assume **Flush** feito (dois mais altos daquele naipe ainda livres).
+  - Board com **4 ranks únicos em sequência** (consecutivos, wheel A-2-3-4 permitido, wrap K-A-2-3 proibido) → assume **Straight** feito (as duas cartas que completam a sequência **mais alta** possível; se só uma carta completa, a segunda é o melhor kicker livre).
+  - Board **pareado** → assume **Trinca** do par mais alto da mesa (uma carta desse rank + melhor kicker livre). Dois pares na mesa: usa o par de rank maior.
+  - Caso contrário → assume o **par mais alto da mesa** (uma carta do maior rank do board + melhor kicker livre, Ás se couber).
+  Se duas ou mais texturas se aplicam, fica a suposição cuja melhor 5 **atual** (2 assumidas + board, sem a próxima carta) for a **mais forte** no ranking completo (RN-029). Se uma textura não puder ser montada com 2 cartas livres, descarta-a e tenta a seguinte nessa ordem de força. Descer o rank do “par mais alto” (2º do board, etc.) só se o herói tiver esgotado as cartas do rank alvo.
+- RN-059: A linha de suposição é uma frase só, sem listar as 2 cartas, sem kicker por extenso, sem revelar A/B. Texto conforme a categoria da mão assumida **já feita** no board atual:
+  - Par → **“Suponha que o adversário já tem o par mais alto da mesa.”**
+  - Trinca → **“Suponha que o adversário já tem trinca do par da mesa.”**
+  - Straight → **“Suponha que o adversário já tem Straight.”**
+  - Flush → **“Suponha que o adversário já tem Flush.”**
+  - Outra categoria RN-014 (Full house, Quadra, etc., se o board empurrar a mão assumida) → **“Suponha que o adversário já tem {rótulo}.”**
+- RN-056: Baralho da próxima carta = 52 − 2 hole do herói − comunitárias já abertas − 2 assumidas. Flop: cada uma das restantes como **turn**. Turn: cada uma como **river**. Runner-runner **não** conta. Hole reais de A/B que não coincidam com as assumidas **permanecem** no baralho da próxima carta.
+- RN-069: Horizonte único da §5.4 e da §5.8 = **a próxima carta**.
+- RN-060: Lista vazia de upgrades vencedores (herói já à frente do assumido, ou nenhuma próxima carta vence) → HUD `sem_upgrade` com **“Não há mão que vire o pote.”** + **Continuar**. MUST NOT abrir a §5.8. MUST NOT alterar `upgrade`, `outs` nem `odds`.
+- RN-057: A categoria C é upgrade vencedor se e somente se existe **pelo menos uma** carta do baralho da próxima carta tal que, após ela abrir: (1) a melhor 5 do herói tem categoria **exatamente C**; (2) C é **estritamente mais forte** que a mão atual (RN-014); (3) a melhor 5 do herói **vence estritamente** a melhor 5 do vilão assumido (2 assumidas + board + essa carta). Empate com o vilão **não** torna C verdadeira (RN-070).
+- RN-070: Só mão **estritamente superior** conta. Split no desfecho hipotético não é out nem upgrade vencedor.
 - RN-021: Categoria igual ou mais fraca que a atual **não** é upgrade (quem tem trinca não “ainda forma um par”).
 - RN-022: **Carta alta** nunca é upgrade.
-- RN-046 (reitera): ir de “par fraco” para “par forte” não é upgrade.
-- RN-023: Montagem das opções:
-  - 1 a 5 upgrades: mostra **todos** + distratoras (categorias que não são upgrade nesta street) até 6.
-  - 6 ou mais: mostra **só os 6 mais fortes** (ordem RN-014), **sem distratoras**. O usuário deve marcar as 6.
-  - Upgrades que **não couberam** nos 6 **não são cobrados e não geram estatística** nesta pergunta.
+- RN-046 (reitera): ir de “par fraco” para “par forte” **não** é chip nesta pergunta. Se o herói já tem Par e um Rei faria um par melhor que o do vilão, **Par** não entra como verdadeira; essas cartas só aparecem na §5.8.
+- RN-023: Montagem das opções (universo = upgrades **vencedores** desta street):
+  - 1 a 5: mostra **todos** + distratoras (categorias que **não** são upgrade vencedor nesta street) até 6.
+  - 6 ou mais: mostra **só os 6 mais fortes** (ordem RN-014), **sem distratoras**.
+  - Os que **não couberam** nos 6 **não são cobrados e não geram estatística**.
 - RN-024: Na **primeira Confirmação**, cada opção **exibida** é avaliada assim (bucket `upgrade`):
 
   | Situação na 1ª confirmação | Contador |
@@ -305,24 +326,31 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
   | Upgrade verdadeiro **marcado** | +1 acerto nessa categoria |
   | Upgrade verdadeiro **não marcado** | +1 erro nessa categoria |
   | Distratora **marcada** (falso positivo) | +1 erro nessa categoria |
-  | Distratora **não marcada** | não incrementa (não é acerto) |
+  | Distratora **não marcada** | não incrementa (nem acerto) |
 
 - RN-025: Depois da 1ª confirmação: distratoras marcadas desabilitam; upgrades já marcados corretamente travam (não desmarcar); upgrades verdadeiros ainda não marcados continuam selecionáveis. Nova **Confirmar** até o conjunto exibido estar perfeito. Não altera contadores da 1ª vez (RN-026).
 - RN-026: Tentativas seguintes não mudam `upgrade`.
-- RN-027: Sem vocabulário de draws. Sempre tentar 6 opções, salvo o skip de lista vazia.
+- RN-027: Sem vocabulário de draws **como rótulo de opção** (`flush draw`, `gutshot`, `overcards`). Os termos de clube **outs** e **odd** aparecem só na §5.8. Sempre tentar 6 opções nesta pergunta, salvo o skip de lista vazia.
+- RN-071: As 2 cartas assumidas, o baralho da próxima carta, a lista de outs e o dump de comparação **nunca** vão para `localStorage` / `sessionStorage` / cookie / IndexedDB, nem viram hole cards visíveis de A ou B.
 
 **Casos de erro:**
 
 | Situação | Comportamento esperado |
 |----------|------------------------|
-| Confirmar sem marcar nada quando há upgrade nas opções | Erro na 1ª vez em cada upgrade omitido; pede de novo |
+| Confirmar sem marcar nada quando há upgrade vencedor nas opções | Erro na 1ª vez em cada upgrade omitido; pede de novo |
 | Marcar todas havendo distratora | Distratora desabilita; pede correção |
+| Falha ao montar o vilão assumido | A mão aborta: HUD `ociosa` + **Nova mão**; MUST NOT fingir lista vazia; contadores já gravados nesta visita permanecem |
 
 **Critérios de aceitação:**
-- [ ] CA-014: Dado um flop em carta alta com **7 ou mais** upgrades possíveis, quando o quiz abre, então as opções são **exatamente os 6 mais fortes** (no extremo: Royal flush, Straight flush, Quadra, Full house, Flush, Straight), todas devem ser marcadas, **não há distratora**, e Par/Dois pares/Trinca **não aparecem** mesmo que também sejam possíveis.
-- [ ] CA-015: Dado um turn com exatamente 2 upgrades, quando o quiz abre, então esses 2 estão nas opções e há 4 distratoras (total 6).
-- [ ] CA-016: Dado Flush verdadeiro e Par como distratora na 1ª confirmação, quando o usuário marca os dois, então Flush recebe acerto, Par recebe erro de falso positivo, Par desabilita, e a pergunta não fecha até o conjunto estar correto.
-- [ ] CA-017: Dado herói com royal no flop, quando seria a 5.4, então **não** há múltipla seleção; há mensagem + **Continuar**; nenhum contador `upgrade` muda.
+- [ ] CA-033: Dado herói **K♣ Q♦**, board **10♠ 9♦ 5♣** (flop) e vilão assumido = par mais alto (um 10 + melhor kicker legal), quando a 5.4 abre, então o enunciado é **“Quais mãos melhoram o seu jogo com chance de ganhar o pote?”**, a linha é **“Suponha que o adversário já tem o par mais alto da mesa.”**, **Par** e **Straight** são verdadeiros (Rei/Dama fazem par maior; Valete faz sequência), e um par de 9 ou de 5 **sozinho** não torna **Par** falso — **Par** continua verdadeiro por causa de Rei/Dama.
+- [ ] CA-034: Dado que a única forma de completar **Par** na próxima carta perde do vilão assumido (par menor ou carta que também dá jogo melhor a ele), quando a 5.4 abre, então **Par** **não** é upgrade verdadeiro.
+- [ ] CA-035: Dado exatamente 2 upgrades vencedores no turn, quando o quiz abre, então esses 2 estão nas opções e há 4 distratoras (total 6).
+- [ ] CA-036: Dado lista vazia de upgrades vencedores (herói já à frente do assumido, ou nenhuma próxima carta vence), quando seria a 5.4, então HUD `sem_upgrade` com **“Não há mão que vire o pote.”** + **Continuar**; `upgrade`, `outs` e `odds` não mudam; **não** há §5.8.
+- [ ] CA-037: Dado Flush verdadeiro (vencedor) e Par distratora na 1ª confirmação, quando o usuário marca os dois, então Flush recebe acerto, Par recebe erro de falso positivo, Par desabilita, e a pergunta não fecha até o conjunto estar correto.
+- [ ] CA-038: Dado a 5.4 aberta, quando se olham os assentos, então A e B continuam fechados e as 2 cartas assumidas **não** aparecem como hole cards.
+- [ ] CA-039: Dado um flop em que Flush só existe runner-runner, quando a 5.4 abre, então **Flush** **não** é verdadeiro.
+
+> CA-014–CA-017 (lista “ainda possível” sem vilão) foram **substituídos** por CA-033–CA-039.
 
 ---
 
@@ -331,7 +359,7 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 **Objetivo:** Treinar a leitura das três mãos abertas e quem leva o pote — inclusive empate.
 
 **Fluxo principal:**
-1. Após o quiz do turn, a carta `[10]` abre no slot 5.
+1. Após o quiz do turn (5.3 → 5.4 → 5.8 ou skip), a carta `[10]` abre no slot 5.
 2. Hole cards de A e B viram nos assentos.
 3. O HUD pergunta **nesta ordem**, cada uma só depois da anterior acertada:
    1. Qual mão **você** completou? — contrato 5.3 (é a única identificação da mão do herói no river)
@@ -401,10 +429,12 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
   - `mao_atual`: por cada rótulo RN-014 — acertos 1ª, erros 1ª, exposições
   - `upgrade`: idem
   - `vencedor_pote`: um único grupo acertos/erros/exposições
+  - `outs`: um único grupo acertos/erros/exposições (quantidade **e** ranks da §5.8 são duas exposições independentes neste grupo)
+  - `odds`: um único grupo acertos/erros/exposições
   No MVP, **exposições = acertos + erros** daquele bucket/categoria (não se conta “viu como distratora e não marcou”).
 - RN-039: Não persistir nome, e-mail, apelido digitado nem identificador pessoal.
 - RN-040: O modelo basta para um relatório futuro de taxa na 1ª tentativa. Sem replay de cartas no MVP.
-- RN-047: Seleção única (5.3 e “quem ganhou”) submete **no clique**. Múltipla seleção (5.4) exige **Confirmar**.
+- RN-047: Seleção única (5.3, “quem ganhou”, **quantas outs**, **qual odd**) submete **no clique**. Múltipla seleção (5.4 e **quais ranks são outs**) exige **Confirmar**.
 
 **Casos de erro:**
 
@@ -462,7 +492,7 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 - [ ] CA-029: Dado a colinha visível no desktop, quando o usuário oculta e depois reabre, então o painel some deixando só **Colinha** no mesmo canto e, ao reabrir, o painel volta com as mesmas 10 linhas; ao recarregar a página, a colinha está visível de novo.
 - [ ] CA-030: Dado um quiz ativo (`perguntando`), quando o usuário olha ou aciona a colinha, então nenhuma linha está destacada como “a certa”, e clicar uma linha não muda enunciado, opções nem contadores.
 - [ ] CA-031: Dado viewport com largura ≤ 900 px, quando se abre o app, então não há painel de classificação nem botão **Colinha**.
-- [ ] CA-032: Dado a colinha ocultada no desktop, quando se inspeciona o armazenamento da origem, então a única chave de produto continua `poker-trainer:evolucao` (buckets `mao_atual`, `upgrade`, `vencedor_pote`); não existe chave de preferência da colinha.
+- [ ] CA-032: Dado a colinha ocultada no desktop, quando se inspeciona o armazenamento da origem, então a única chave de produto continua `poker-trainer:evolucao` (buckets `mao_atual`, `upgrade`, `vencedor_pote`, e após a 008 também `outs` e `odds`); não existe chave de preferência da colinha.
 
 **UI/UX desta funcionalidade (detalhe de produto):**
 - Lista vertical compacta; indicador discreto de Melhor (topo) → Pior (base).
@@ -472,10 +502,76 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 
 ---
 
+### 5.8 Outs e odd da próxima carta (flop e turn)
+
+**Objetivo:** Depois de acertar quais categorias ainda vencem o vilão assumido, treinar a **contagem de outs limpos** (quantas e quais ranks) e converter isso na **odd** da próxima carta (regra do 2). Não treina Pot Odds.
+
+**Pré-requisito:** §5.4 da mesma street acertada. **Não ocorre** após skip (RN-060) nem no river.
+
+**Fluxo principal:**
+1. Só depois do beat de acerto da 5.4.
+2. HUD pergunta **“Quantas outs você tem?”** — seleção única, clique submete, 6 totais (RN-063), retry, 1ª tentativa em `outs`.
+3. Acerto → **“Quais ranks são outs?”** — os 13 ranks (RN-064), múltipla seleção + **Confirmar**, retry no contrato RN-025 (conjunto), 1ª **Confirmar** em `outs` (exposição independente da quantidade).
+4. Acerto do conjunto → **“Qual é a sua odd?”** — seleção única, 6 razões X:1 (RN-066), 1ª tentativa em `odds`.
+5. Acerto da odd → avança a street (turn ou river).
+
+**Fluxos alternativos:**
+- Skip da 5.4: esta seção **não** roda.
+
+**Regras de negócio:**
+- RN-068: A §5.8 só abre se a 5.4 da mesma street teve lista não vazia e o conjunto exibido foi acertado. MUST NOT abrir no skip nem no river.
+- RN-061: Uma carta do baralho da próxima carta (RN-056) é **out** se e somente se, ao abri-la, a melhor 5 do herói **vence estritamente** a melhor 5 do vilão assumido (mesmo RN-070). Cartas que só melhoram o herói sem virar o pote, ou que também dão ao vilão um jogo ainda melhor, **não** são outs (desconto). Cada carta conta no máximo uma vez.
+- RN-062: Um rank é out se existe **pelo menos uma** carta-out desse rank. Se 2 de 4 Valetes forem sujos, **Valete** continua verdadeiro e a quantidade correta é 2 (não 4).
+- RN-074: Ranks que melhoram dentro da mesma categoria (par melhor quando o herói já tem par) **entram** aqui se a carta for out (RN-061), mesmo sem terem sido chip na 5.4.
+- RN-063: Enunciado **“Quantas outs você tem?”**. Sempre **6** inteiros distintos no intervalo 1–47, incluindo o N correto (N ≥ 1 nesta seção). Distratoras: preferir N±1, N±2 e os totais comuns {4, 5, 8, 9, 12, 15}, sem repetir, preenchendo o que faltar com o inteiro mais próximo ainda livre. Ordem visual embaralhada (RN-G008). Seleção única, clique submete.
+- RN-064: Enunciado **“Quais ranks são outs?”**. Sempre os **13** rótulos, nesta identidade (ordem visual embaralhada): **2**, **3**, **4**, **5**, **6**, **7**, **8**, **9**, **10**, **Valete**, **Dama**, **Rei**, **Ás**. Distratora = rank sem out limpo. Múltipla seleção + **Confirmar**. Sem teto de 6. Sem “marcar todas”. Foco inicial na primeira opção da ordem visual.
+- RN-065: P(ganho) = min(2 × N, 100)% com N = número de outs (RN-061). Odd = (100 − 2N) : (2N), ou X = 50/N − 1. Exibir **X:1** com X inteiro: arredondar ao mais próximo; **0,5 arredonda para baixo**. Gabarito canônico (N → X:1):
+
+  | N | Odd | N | Odd | N | Odd | N | Odd |
+  |---|-----|---|-----|---|-----|---|-----|
+  | 1 | 49:1 | 6 | 7:1 | 11 | 4:1 | 16 | 2:1 |
+  | 2 | 24:1 | 7 | 6:1 | 12 | 3:1 | 17 | 2:1 |
+  | 3 | 16:1 | 8 | 5:1 | 13 | 3:1 | 18 | 2:1 |
+  | 4 | 11:1 | 9 | 5:1 | 14 | 3:1 | 19 | 2:1 |
+  | 5 | 9:1 | 10 | 4:1 | 15 | 2:1 | 20 | 1:1 |
+
+  N > 20: a mesma fórmula. Sempre regra do **2** (próxima carta), no flop e no turn. MUST NOT usar a regra do 4.
+- RN-066: Enunciado **“Qual é a sua odd?”**. Sempre **6** razões distintas no formato **X:1**, incluindo a correta. Distratoras: X±1 e razões comuns {2:1, 3:1, 4:1, 5:1, 9:1, 11:1}, sem repetir. Ordem visual embaralhada. Seleção única, clique submete.
+- RN-067: 1ª tentativa de **quantas** → +1 acerto ou erro em `outs` (um grupo). 1ª **Confirmar** de **quais ranks**: conjunto perfeito das 13 → +1 acerto em `outs`; senão +1 erro em `outs` (não há acerto por rank). 1ª tentativa da odd → +1 acerto ou erro em `odds`. Tentativas seguintes não mudam esses buckets. MUST NOT gravar N, a lista de ranks, a razão, cartas ou o vilão assumido.
+- RN-027 (reitera): opções de rank e de odd **não** usam nomes de draw.
+
+**Casos de erro:**
+
+| Situação | Comportamento esperado |
+|----------|------------------------|
+| Quantidade errada | Opção morta; “Não é essa. Tente de novo.”; `outs` +1 erro na 1ª vez |
+| Confirmar ranks vazio ou incompleto | Erro na 1ª vez em `outs`; ranks verdadeiros omitidos continuam selecionáveis; distratoras marcadas morrem |
+| Odd errada | Opção morta; retry; `odds` +1 erro na 1ª vez |
+| Motor não fecha N / ranks / X | A mão aborta (`ociosa` + **Nova mão**); MUST NOT inventar 0 outs |
+
+**Critérios de aceitação:**
+- [ ] CA-040: Dado o exemplo CA-033 no flop e a 5.4 acertada, quando a §5.8 abre, então o enunciado é **“Quantas outs você tem?”**, a correta é **10** (3 Reis + 3 Damas + 4 Valetes, descontando as 2 assumidas e as visíveis), há 6 totais incluindo 10, e o turn **ainda não** abriu.
+- [ ] CA-041: Dado o acerto de 10, quando “quais ranks” abre, então há exatamente os 13 rótulos de RN-064; o conjunto verdadeiro é **Rei**, **Dama** e **Valete**; 9 e 5 **não** são verdadeiros.
+- [ ] CA-042: Dado o conjunto de ranks acertado com N = 10, quando a odd abre, então a correta é **4:1** e há 6 razões distintas.
+- [ ] CA-043: Dado skip da 5.4, quando a street segue, então **não** há perguntas da §5.8 e `outs`/`odds` não mudam.
+- [ ] CA-044: Dado N = 4, quando a odd é cobrada, então a correta é **11:1**. Dado N = 9, a correta é **5:1** (não 4:1).
+- [ ] CA-045: Dado 4 Valetes no baralho da próxima carta dos quais 2 são outs e 2 são sujos, quando se avalia o gabarito, então N inclui 2 (não 4) e **Valete** é rank verdadeiro.
+- [ ] CA-046: Dado erro na 1ª tentativa de quantidade e acerto depois, quando se lê a persistência, então `outs` tem +1 erro e +0 acerto nessa exposição; a 1ª Confirmar dos ranks é outra exposição em `outs`; a odd escreve só `odds`.
+- [ ] CA-047: Dado um acerto de primeira nas três perguntas da §5.8, quando se inspeciona o storage, então o JSON tem os cinco buckets e **não** contém cartas, ranks, N, razão, vilão assumido nem information set.
+- [ ] CA-048: Dado flop e turn da mesma mão, ambos com 5.4 não vazia, quando as 1ªs tentativas terminam, então são exposições independentes em `upgrade`, `outs` e `odds` — MUST NOT fundir os deltas das duas streets.
+
+**UI/UX desta funcionalidade (detalhe de produto):**
+- Quantidade e odd: mesma grade 2×3 / 3×2 das outras perguntas de 6.
+- Ranks: faixa compacta que quebra em duas ou três linhas no HUD; **não** forçar 2×3. Os 13 chips cabem no desktop de referência sem cobrir comunitárias.
+- A linha de suposição da 5.4 **pode** permanecer visível (só leitura) durante a §5.8 da mesma street — não é nova pergunta.
+- Termos visíveis: **outs**, **odd**, **ranks**. MUST NOT escrever “Pot Odds”, “flush draw” ou “gutshot”.
+
+---
+
 ## 6. Regras de negócio globais
 
 - RN-G001: Uma pergunta de cada vez no HUD. Nunca empilhar os quatro quizzes do river.
-- RN-G002: Não avança de street enquanto as perguntas **da street** não estiverem acertadas. Flop/turn = 5.3 + (5.4 ou skip). River = as quatro do §5.5 (sem 5.4).
+- RN-G002: Não avança de street enquanto as perguntas **da street** não estiverem acertadas. Flop/turn = 5.3 + (5.4 ou skip) + (§5.8 só se a 5.4 não foi skip). River = as quatro do §5.5 (sem 5.4 nem 5.8).
 - RN-G003: Empates de pote fazem parte do treino; o gerador **não** evita boards que empatam.
 - RN-G004: Kickers decidem o pote no motor e **nunca** saem como texto de opção.
 - RN-G005: Sem “pular pergunta” e sem botão que revele a resposta.
@@ -488,7 +584,7 @@ Cada caixa de quiz só avança depois de acerto (com retry). Não existe pergunt
 | Tipo | Descrição |
 |------|-----------|
 | Externa | Nenhuma API de jogo, pagamento ou identidade |
-| Interna | 5.2 antes de qualquer quiz; 5.3 da street antes de 5.4; flop completo antes do turn; turn completo antes do river; 5.5 após o river abrir (inclui a única 5.3 do herói no river); 5.6 atravessa todas as perguntas; 5.7 depende só do casco visual da 5.1 (não bloqueia o quiz) |
+| Interna | 5.2 antes de qualquer quiz; 5.3 da street antes de 5.4; 5.4 acertada antes de 5.8; skip da 5.4 **não** abre 5.8; flop completo antes do turn; turn completo antes do river; 5.5 após o river abrir (inclui a única 5.3 do herói no river); 5.6 atravessa todas as perguntas; 5.7 depende só do casco visual da 5.1 (não bloqueia o quiz) |
 | Infra | Hospedagem estática e persistência no navegador (ADRs) |
 
 ## 8. Restrições não-funcionais
@@ -517,7 +613,7 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 **Hierarquia no quadro**
 1. Comunitárias e hole cards.
 2. Assentos e quem está aberto no showdown.
-3. HUD ancorado embaixo (estilo Fold/Call/Raise), enunciado em uma frase, 6 opções em grade 2×3 ou 3×2 no desktop. Multi-select: as 6 opções + **Confirmar**.
+3. HUD ancorado embaixo (estilo Fold/Call/Raise), enunciado em uma frase, 6 opções em grade 2×3 ou 3×2 no desktop. Multi-select de categoria: as 6 + **Confirmar**. Ranks da §5.8: 13 chips em faixa compacta + **Confirmar**. A linha de suposição da 5.4 é secundária, não compete com as cartas.
 4. Feedback colado no HUD, não no topo da página.
 5. Colinha da §5.7 no canto superior direito (desktop), abaixo das cartas na hierarquia: consulta, não palco.
 
@@ -550,15 +646,18 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 | Street | Flop, turn ou river (não existe street de quiz preflop) |
 | Categoria | Um dos 10 rótulos de RN-014 |
 | Mão atual | Melhor categoria já completa na street, para aquele jogador |
-| Upgrade | Categoria **estritamente mais forte** que a atual cuja **melhor** mão após algum runout ainda possível (information set do herói) é **exatamente** essa categoria |
-| Information set do herói | 52 − hole do herói − board já aberto; inclui cartas dos adversários e o stub |
+| Upgrade | Categoria **estritamente mais forte** que a atual, **exatamente C** após alguma **próxima carta**, com a qual o herói **vence estritamente** o vilão assumido (desconto de outs). RN-020 antigo (sem vilão) foi substituído |
+| Vilão assumido | Duas cartas sintéticas da receita pessimista (RN-055); não são as hole de A/B |
+| Out | Carta da próxima street que deixa o herói **estritamente superior** ao vilão assumido |
+| Odd | Razão X:1 da próxima carta pela regra do 2 (RN-065). Não é Pot Odds |
+| Information set do herói | 52 − hole do herói − board já aberto; nas §5.4/§5.8 as 2 assumidas também saem do baralho da próxima carta |
 | Distratora | Opção exibida que não é resposta correta |
 | Showdown | River aberto + hole cards dos três visíveis |
 | Pote | Cenografia de fichas; no quiz, “quem ganhou o pote” |
 | Primeira tentativa | Primeiro clique (seleção única) ou primeira **Confirmar** (múltipla seleção) daquela pergunta |
 | HUD | Painel de pergunta/ação integrado à mesa |
 | Colinha | Overlay desktop com a classificação RN-014 em miniatura; não é pergunta nem relatório |
-| Runout | Cartas ainda por vir (turn e/ou river) no information set |
+| Runout | Na §5.4/§5.8: só a **próxima** carta. Runner-runner não conta |
 | Wheel | Straight A-2-3-4-5 (Ás baixo) |
 
 ## 10. Documentos relacionados
@@ -566,7 +665,8 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 - [context.md](context.md)
 - [speckit-roadmap.md](speckit-roadmap.md)
 - ADRs: [docs/adr/](adr/)
-- Change Requests: [CR-001](changes/CR-001.md)
+- Change Requests: [CR-001](changes/CR-001.md) · [CR-002](changes/CR-002.md)
+- Estudo: [outs-and-odds.md](studies/outs-and-odds.md) (desconto de outs; Pot Odds do estudo está fora do MVP)
 
 ## Histórico de revisões
 
@@ -575,3 +675,4 @@ Este software **vende a ilusão de estar sentado numa mesa de poker online**. A 
 | 2026-09-07 | — | Criação inicial |
 | 2026-09-07 | — | Revisão de consistência: sem quiz preflop; 5.3 só flop/turn (river no §5.5 uma vez); ranking/wheel/sem wrap; burns não consomem carta; labels canônicos; distratoras e vencedor determinísticos; stats de falso positivo em upgrade; HUD estados; CA-001/012/014/026/027 |
 | 2026-09-07 | CR-001 | §5.7 colinha de classificação no desktop (RN-048–054, CA-028–032); CA-024 esclarece que colinha ≠ ranking de desempenho |
+| 2026-09-13 | CR-002 | §5.4 passa a cobrar só upgrades que vencem o vilão assumido (RN-055–071; CA-033–039 substituem CA-014–017 / RN-020); nova §5.8 outs e odd (RN-061–068, RN-074, CA-040–048); Pot Odds fora |
