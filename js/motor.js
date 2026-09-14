@@ -1,6 +1,7 @@
 /**
- * Motor de avaliação: melhor 5 + RN-017 + enumerador de upgrades + quemGanhou.
- * MUST NOT persistir Melhor5, kickers, cartas, runouts, snapshot, chaveDesempate ou dump de quemGanhou.
+ * Motor de avaliação: melhor 5 + quemGanhou + vilão assumido + desconto de outs + odd da próxima carta.
+ * MUST NOT persistir Melhor5, kickers, cartas, runouts, snapshot, chaveDesempate,
+ * vilão assumido, lista de outs, ranks, N, razão ou dump de quemGanhou.
  */
 
 import { NAIPES, RANKS } from './baralho.js';
@@ -339,11 +340,175 @@ export function snapshotDesconhecido(visiveis) {
   return cartas;
 }
 
-function todasMaisFortesTestemunhadas(testemunhadas, maisFortes) {
-  return maisFortes.every((id) => testemunhadas.has(id));
+function usadasDe(...listas) {
+  const usados = new Set();
+  for (const lista of listas) {
+    for (const carta of lista ?? []) {
+      usados.add(identidadeChave(carta));
+    }
+  }
+  return usados;
 }
 
-export function enumerarUpgrades({ holeHeroi, comunitarias } = {}) {
+function primeiraDoRank(rank, usados) {
+  for (const naipe of NAIPES) {
+    if (!usados.has(`${rank}-${naipe}`)) return { rank, naipe };
+  }
+  return null;
+}
+
+function melhorKickerLivre(usados, excluidos = []) {
+  const ban = new Set(excluidos);
+  for (const rank of RANKS) {
+    if (ban.has(rank)) continue;
+    const carta = primeiraDoRank(rank, usados);
+    if (carta) return carta;
+  }
+  return null;
+}
+
+function marcarUso(usados, carta) {
+  const proximo = new Set(usados);
+  proximo.add(identidadeChave(carta));
+  return proximo;
+}
+
+function parDeCartas(a, b) {
+  if (!a || !b) return null;
+  if (identidadeChave(a) === identidadeChave(b)) return null;
+  return [identidade(a), identidade(b)];
+}
+
+function tentarFlushAssumido(board, usados) {
+  const porNaipe = new Map(NAIPES.map((naipe) => [naipe, 0]));
+  for (const carta of board) {
+    porNaipe.set(carta.naipe, (porNaipe.get(carta.naipe) || 0) + 1);
+  }
+  let naipeAlvo = null;
+  let max = 0;
+  for (const naipe of NAIPES) {
+    const qtd = porNaipe.get(naipe) || 0;
+    if (qtd >= 3 && qtd > max) {
+      max = qtd;
+      naipeAlvo = naipe;
+    }
+  }
+  if (!naipeAlvo) return null;
+  const escolhidas = [];
+  for (const rank of RANKS) {
+    if (!usados.has(`${rank}-${naipeAlvo}`)) {
+      escolhidas.push({ rank, naipe: naipeAlvo });
+      if (escolhidas.length === 2) return escolhidas.map(identidade);
+    }
+  }
+  return null;
+}
+
+function temQuatroRanksEmSequencia(ranks) {
+  const unicos = [...new Set(ranks)];
+  if (unicos.length < 4) return false;
+
+  function valores(aceBaixo) {
+    const nums = unicos.map((rank) => {
+      if (rank === 'A') return aceBaixo ? 1 : 14;
+      return valorRank(rank);
+    });
+    return [...new Set(nums)].sort((a, b) => a - b);
+  }
+
+  function temJanela(lista) {
+    for (let i = 0; i <= lista.length - 4; i += 1) {
+      const fatia = lista.slice(i, i + 4);
+      if (fatia[3] - fatia[0] === 3 && new Set(fatia).size === 4) return true;
+    }
+    return false;
+  }
+
+  return temJanela(valores(false)) || temJanela(valores(true));
+}
+
+function tentarStraightAssumido(board, usados) {
+  const unicos = [...new Set(board.map((carta) => carta.rank))];
+  if (!temQuatroRanksEmSequencia(unicos)) return null;
+
+  let melhor = null;
+  let melhorTopo = -1;
+  for (const seq of SEQUENCIAS_LEGAIS) {
+    const faltam = seq.filter((rank) => !unicos.includes(rank));
+    if (faltam.length === 0 || faltam.length > 2) continue;
+
+    const usadosTmp = new Set(usados);
+    const cartas = [];
+    let ok = true;
+    for (const rank of faltam) {
+      const carta = primeiraDoRank(rank, usadosTmp);
+      if (!carta) {
+        ok = false;
+        break;
+      }
+      cartas.push(carta);
+      usadosTmp.add(identidadeChave(carta));
+    }
+    if (!ok) continue;
+    if (cartas.length === 1) {
+      const kicker = melhorKickerLivre(usadosTmp);
+      if (!kicker) continue;
+      cartas.push(kicker);
+    }
+    if (cartas.length !== 2) continue;
+
+    const topo = topoSequencia(seq);
+    if (topo > melhorTopo) {
+      melhorTopo = topo;
+      melhor = cartas.map(identidade);
+    }
+  }
+  return melhor;
+}
+
+function tentarPareadoAssumido(board, usados) {
+  const porRank = new Map();
+  for (const carta of board) {
+    porRank.set(carta.rank, (porRank.get(carta.rank) || 0) + 1);
+  }
+  const pares = [...porRank.entries()]
+    .filter(([, qtd]) => qtd >= 2)
+    .sort((a, b) => valorRank(b[0]) - valorRank(a[0]));
+  if (pares.length === 0) return null;
+
+  for (const [rank] of pares) {
+    const doPar = primeiraDoRank(rank, usados);
+    if (!doPar) continue;
+    const kicker = melhorKickerLivre(marcarUso(usados, doPar), [rank]);
+    const par = parDeCartas(doPar, kicker);
+    if (par) return par;
+  }
+  return null;
+}
+
+function tentarParMaisAltoAssumido(board, usados) {
+  const ranks = [...new Set(board.map((carta) => carta.rank))].sort(
+    (a, b) => valorRank(b) - valorRank(a),
+  );
+  for (const rank of ranks) {
+    const doRank = primeiraDoRank(rank, usados);
+    if (!doRank) continue;
+    const kicker = melhorKickerLivre(marcarUso(usados, doRank), [rank]);
+    const par = parDeCartas(doRank, kicker);
+    if (par) return par;
+  }
+  return null;
+}
+
+function linhaIdDe(categoriaFeita) {
+  if (categoriaFeita === 'par') return 'par_mais_alto';
+  if (categoriaFeita === 'trinca') return 'trinca_do_par';
+  if (categoriaFeita === 'straight') return 'straight';
+  if (categoriaFeita === 'flush') return 'flush';
+  return 'rotulo';
+}
+
+export function sintetizarVilaoAssumido({ holeHeroi, comunitarias } = {}) {
   try {
     if (!Array.isArray(holeHeroi) || holeHeroi.length !== 2) return { ok: false };
     if (!Array.isArray(comunitarias) || (comunitarias.length !== 3 && comunitarias.length !== 4)) {
@@ -351,50 +516,190 @@ export function enumerarUpgrades({ holeHeroi, comunitarias } = {}) {
     }
 
     const visiveis = [...holeHeroi, ...comunitarias];
-    const chaves = visiveis.map(identidadeChave);
-    if (chaves.some((chave) => chave === 'undefined-undefined' || chave === 'null-null')) {
-      return { ok: false };
-    }
-    if (new Set(chaves).size !== visiveis.length) return { ok: false };
+    if (visiveis.some((carta) => !cartaDoAlfabeto(carta))) return { ok: false };
+    if (new Set(visiveis.map(identidadeChave)).size !== visiveis.length) return { ok: false };
 
-    const desconhecidas = snapshotDesconhecido(visiveis);
-    const esperado = comunitarias.length === 3 ? 47 : 46;
-    if (desconhecidas.length !== esperado) return { ok: false };
+    const usados = usadasDe(holeHeroi, comunitarias);
+    const candidatos = [
+      tentarFlushAssumido(comunitarias, usados),
+      tentarStraightAssumido(comunitarias, usados),
+      tentarPareadoAssumido(comunitarias, usados),
+      tentarParMaisAltoAssumido(comunitarias, usados),
+    ].filter(Boolean);
 
-    const atual = avaliarMelhor5(visiveis);
-    const forcaAtual = FORCA[atual.categoriaId];
-    const maisFortes = CATEGORIAS.filter(
-      (item) => FORCA[item.id] > forcaAtual && item.id !== 'carta_alta',
-    ).map((item) => item.id);
+    if (candidatos.length === 0) return { ok: false };
 
-    const testemunhadas = new Set();
-    if (comunitarias.length === 3) {
-      for (let i = 0; i < desconhecidas.length; i += 1) {
-        if (todasMaisFortesTestemunhadas(testemunhadas, maisFortes)) break;
-        for (let j = i + 1; j < desconhecidas.length; j += 1) {
-          const melhor = avaliarMelhor5([
-            ...holeHeroi,
-            ...comunitarias,
-            desconhecidas[i],
-            desconhecidas[j],
-          ]);
-          testemunhadas.add(melhor.categoriaId);
-          if (todasMaisFortesTestemunhadas(testemunhadas, maisFortes)) break;
-        }
-      }
-    } else {
-      for (const river of desconhecidas) {
-        const melhor = avaliarMelhor5([...holeHeroi, ...comunitarias, river]);
-        testemunhadas.add(melhor.categoriaId);
-        if (todasMaisFortesTestemunhadas(testemunhadas, maisFortes)) break;
+    let melhor = null;
+    for (const cartas of candidatos) {
+      const feito = avaliarMelhor5([...cartas, ...comunitarias]);
+      if (!melhor || compararChave(feito.chaveDesempate, melhor.feito.chaveDesempate) > 0) {
+        melhor = { cartas, feito };
       }
     }
 
-    const upgrades = maisFortes.filter((id) => testemunhadas.has(id));
-    return { ok: true, categoriaAtual: atual.categoriaId, upgrades };
+    return {
+      ok: true,
+      cartas: melhor.cartas.map(identidade),
+      categoriaFeita: melhor.feito.categoriaId,
+      linhaId: linhaIdDe(melhor.feito.categoriaId),
+    };
   } catch {
     return { ok: false };
   }
+}
+
+export function baralhoProximaCarta({ holeHeroi, comunitarias, assumidas } = {}) {
+  const usados = usadasDe(holeHeroi, comunitarias, assumidas);
+  const cartas = [];
+  for (const rank of RANKS) {
+    for (const naipe of NAIPES) {
+      if (!usados.has(`${rank}-${naipe}`)) cartas.push({ rank, naipe });
+    }
+  }
+  return cartas;
+}
+
+export function oddDaProximaCarta(n) {
+  const bruto = 50 / n - 1;
+  const frac = bruto - Math.floor(bruto);
+  const x = frac > 0.5 ? Math.ceil(bruto) : Math.floor(bruto);
+  return { x, rotulo: `${x}:1` };
+}
+
+function inteiroEmFaixa(n, min, max) {
+  return Number.isInteger(n) && n >= min && n <= max;
+}
+
+export function conjuntoOpcoesQuantidade({ n } = {}) {
+  if (!inteiroEmFaixa(n, 1, 47)) return { ids: [], verdadeiros: [] };
+  const ids = new Set([n]);
+  const preferidos = [n - 1, n + 1, n - 2, n + 2, 4, 5, 8, 9, 12, 15];
+  for (const cand of preferidos) {
+    if (ids.size >= 6) break;
+    if (inteiroEmFaixa(cand, 1, 47) && !ids.has(cand)) ids.add(cand);
+  }
+  let raio = 1;
+  while (ids.size < 6 && raio <= 47) {
+    for (const cand of [n - raio, n + raio]) {
+      if (ids.size >= 6) break;
+      if (inteiroEmFaixa(cand, 1, 47) && !ids.has(cand)) ids.add(cand);
+    }
+    raio += 1;
+  }
+  return { ids: [...ids].sort((a, b) => a - b), verdadeiros: [n] };
+}
+
+export function conjuntoOpcoesOdd({ x } = {}) {
+  if (!Number.isInteger(x) || x < 0) return { ids: [], verdadeiros: [] };
+  const valores = new Set([x]);
+  const preferidos = [x + 1, x - 1, 2, 3, 4, 5, 9, 11];
+  for (const cand of preferidos) {
+    if (valores.size >= 6) break;
+    if (Number.isInteger(cand) && cand >= 0 && !valores.has(cand)) valores.add(cand);
+  }
+  let raio = 1;
+  while (valores.size < 6 && raio <= 80) {
+    for (const cand of [x - raio, x + raio]) {
+      if (valores.size >= 6) break;
+      if (Number.isInteger(cand) && cand >= 0 && !valores.has(cand)) valores.add(cand);
+    }
+    raio += 1;
+  }
+  const ordenados = [...valores].sort((a, b) => a - b);
+  return {
+    ids: ordenados.map((valor) => ({ valor, rotulo: `${valor}:1` })),
+    verdadeiros: [x],
+  };
+}
+
+export function avaliarDescontoStreet({ holeHeroi, comunitarias } = {}) {
+  try {
+    if (!Array.isArray(holeHeroi) || holeHeroi.length !== 2) return { ok: false };
+    if (!Array.isArray(comunitarias) || (comunitarias.length !== 3 && comunitarias.length !== 4)) {
+      return { ok: false };
+    }
+
+    const visiveis = [...holeHeroi, ...comunitarias];
+    if (visiveis.some((carta) => !cartaDoAlfabeto(carta))) return { ok: false };
+    if (new Set(visiveis.map(identidadeChave)).size !== visiveis.length) return { ok: false };
+
+    const vilao = sintetizarVilaoAssumido({ holeHeroi, comunitarias });
+    if (!vilao.ok) return { ok: false };
+
+    const baralho = baralhoProximaCarta({
+      holeHeroi,
+      comunitarias,
+      assumidas: vilao.cartas,
+    });
+    const esperado = comunitarias.length === 3 ? 45 : 44;
+    if (baralho.length !== esperado) return { ok: false };
+
+    const atual = avaliarMelhor5(visiveis);
+    const forcaAtual = FORCA[atual.categoriaId];
+    const upgradesSet = new Set();
+    const outs = [];
+
+    for (const carta of baralho) {
+      const heroi = avaliarMelhor5([...holeHeroi, ...comunitarias, carta]);
+      const adversario = avaliarMelhor5([...vilao.cartas, ...comunitarias, carta]);
+      if (compararChave(heroi.chaveDesempate, adversario.chaveDesempate) > 0) {
+        outs.push(identidade(carta));
+        const categoria = heroi.categoriaId;
+        if (categoria !== 'carta_alta' && FORCA[categoria] > forcaAtual) {
+          upgradesSet.add(categoria);
+        }
+      }
+    }
+
+    const upgrades = CATEGORIAS.map((item) => item.id).filter((id) => upgradesSet.has(id));
+    const vilaoResumo = {
+      cartas: vilao.cartas.map(identidade),
+      categoriaFeita: vilao.categoriaFeita,
+      linhaId: vilao.linhaId,
+    };
+
+    if (upgrades.length === 0) {
+      return {
+        ok: true,
+        categoriaAtual: atual.categoriaId,
+        vilao: vilaoResumo,
+        upgrades: [],
+        outs: [],
+        ranks: [],
+        n: 0,
+        odd: null,
+      };
+    }
+
+    const n = outs.length;
+    if (n < 1) return { ok: false };
+    const odd = oddDaProximaCarta(n);
+    if (!odd || !Number.isInteger(odd.x) || odd.x < 0) return { ok: false };
+
+    const ranksVistos = new Set(outs.map((carta) => carta.rank));
+    return {
+      ok: true,
+      categoriaAtual: atual.categoriaId,
+      vilao: vilaoResumo,
+      upgrades,
+      outs,
+      ranks: RANKS.filter((rank) => ranksVistos.has(rank)),
+      n,
+      odd,
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export function enumerarUpgrades({ holeHeroi, comunitarias } = {}) {
+  const resultado = avaliarDescontoStreet({ holeHeroi, comunitarias });
+  if (!resultado.ok) return { ok: false };
+  return {
+    ok: true,
+    categoriaAtual: resultado.categoriaAtual,
+    upgrades: resultado.upgrades,
+  };
 }
 
 export function conjuntoOpcoesUpgrade({ upgrades } = {}) {

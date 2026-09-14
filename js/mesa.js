@@ -77,6 +77,7 @@ function hudOciosa() {
     feedback: null,
     feedbackTexto: null,
     categoriasIdentificadas: { voce: null, adversarioA: null, adversarioB: null },
+    linhaSuposicao: null,
   };
 }
 
@@ -263,6 +264,7 @@ function abrirSkip(sessao, passo) {
   sessao.hud.estado = 'sem_upgrade';
   sessao.hud.enunciado = null;
   sessao.hud.hint = null;
+  sessao.hud.linhaSuposicao = null;
   sessao.hud.street = streetVisivel(sessao.mao?.street);
   sessao.hud.opcoes = [];
   sessao.hud.cta = { nome: COPY.ctaContinuar };
@@ -303,7 +305,20 @@ function abrirStreetSeguinte(sessao, street) {
   entrarDeal(sessao);
 }
 
-// Cad�ncia 005: ap�s a 5.3, decidirPosMaoAtual escolhe pergunta real, skip ou aborto.
+function snapshotDescontoPronto(sessao) {
+  const snap = sessao.mao?.descontoStreet;
+  return Boolean(snap?.ok && snap.n >= 1 && snap.odd && Array.isArray(snap.ranks));
+}
+
+function abrirCincoOito(sessao, passoOuts) {
+  if (snapshotDescontoPronto(sessao)) {
+    abrirPergunta(sessao, passoOuts);
+    return;
+  }
+  falhaEnumeracao(sessao);
+}
+
+// Cadência 008: após a 5.3, decidirPosMaoAtual escolhe 5.4, skip ou aborto. Acerto da 5.4 abre a §5.8.
 function decidirAposMaoAtual(sessao, passoUpgrade, passoSkip) {
   const decisao = decidirPosMaoAtual(sessao);
   if (decisao === 'pergunta') {
@@ -324,6 +339,18 @@ function avancarAcerto(sessao) {
     return;
   }
   if (passo === PASSOS.flop_upgrade) {
+    abrirCincoOito(sessao, PASSOS.flop_outs);
+    return;
+  }
+  if (passo === PASSOS.flop_outs) {
+    abrirPergunta(sessao, PASSOS.flop_ranks);
+    return;
+  }
+  if (passo === PASSOS.flop_ranks) {
+    abrirPergunta(sessao, PASSOS.flop_odds);
+    return;
+  }
+  if (passo === PASSOS.flop_odds) {
     abrirStreetSeguinte(sessao, 'turn');
     return;
   }
@@ -332,6 +359,18 @@ function avancarAcerto(sessao) {
     return;
   }
   if (passo === PASSOS.turn_upgrade) {
+    abrirCincoOito(sessao, PASSOS.turn_outs);
+    return;
+  }
+  if (passo === PASSOS.turn_outs) {
+    abrirPergunta(sessao, PASSOS.turn_ranks);
+    return;
+  }
+  if (passo === PASSOS.turn_ranks) {
+    abrirPergunta(sessao, PASSOS.turn_odds);
+    return;
+  }
+  if (passo === PASSOS.turn_odds) {
     abrirStreetSeguinte(sessao, 'river');
     return;
   }
@@ -807,6 +846,12 @@ function renderHud() {
     if (street) hud.append(marcadorStreet(street));
     linha.textContent = sessao.hud.enunciado ?? '';
     hud.append(linha);
+    if (sessao.hud.linhaSuposicao) {
+      const suposicao = document.createElement('p');
+      suposicao.className = 'hud__linha hud__suposicao';
+      suposicao.textContent = sessao.hud.linhaSuposicao;
+      hud.append(suposicao);
+    }
     if (sessao.hud.hint) {
       const hint = document.createElement('p');
       hint.className = 'hud__hint';
@@ -899,6 +944,9 @@ function gradeOpcoes() {
   wrap.className = 'hud__opcoes';
   if (sessao.mao?.passo === PASSOS.river_vencedor) {
     wrap.classList.add('hud__opcoes--pote');
+  }
+  if (sessao.mao?.passo === PASSOS.flop_ranks || sessao.mao?.passo === PASSOS.turn_ranks) {
+    wrap.classList.add('hud__opcoes--ranks');
   }
   const multipla = modoDoPasso(sessao.mao?.passo) === 'multipla';
   for (const opcao of sessao.hud.opcoes) {
@@ -1231,10 +1279,10 @@ function onCta(nome) {
     aplicar(sessao, EVENTOS.CONTINUAR);
     renderHud();
     atualizarPote();
-    if (passo === PASSOS.flop_skip || passo === PASSOS.flop_upgrade) {
+    if (passo === PASSOS.flop_skip) {
       void ritualTurnOuRiver('turn', 4);
     }
-    if (passo === PASSOS.turn_skip || passo === PASSOS.turn_upgrade) {
+    if (passo === PASSOS.turn_skip) {
       void ritualTurnOuRiver('river', 5);
     }
   }

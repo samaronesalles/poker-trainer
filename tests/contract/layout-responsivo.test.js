@@ -117,7 +117,7 @@ test('UX-03: em 320 px A e B ficam em fileira no arco, fora do recorte do oval',
   assert.match(html, /data-seat="adversarioB"/);
   assert.match(mesaCss, /\.arco-adversarios[\s\S]*display:\s*flex/);
   assert.match(mesaCss, /justify-content:\s*space-between/);
-  assert.match(mesaCss, /\n\.apelido \{\n[\s\S]*?white-space:\s*nowrap/);
+  assert.match(mesaCss, /\.apelido\s*\{[\s\S]*?white-space:\s*nowrap/);
 });
 
 test('UX-04: fichas do pote caminham até o assento real e ficam no feltro', () => {
@@ -309,13 +309,24 @@ test('UX-18: lista toda revelada troca o tom para Continuar, sem “tente de nov
   assert.equal(sessao.hud.cta?.nome, COPY.ctaContinuar);
   assert.notEqual(sessao.hud.feedbackTexto, COPY.erro);
   aplicar(sessao, EVENTOS.CONTINUAR);
-  assert.equal(sessao.hud.estado, 'deal');
-  assert.equal(sessao.mao.street, 'turn');
+  assert.ok(
+    sessao.mao.passo === PASSOS.flop_outs ||
+      sessao.hud.estado === 'deal' ||
+      sessao.hud.estado === 'ociosa',
+  );
 });
 
 test('UX-19: burn some em tela estreita e na paisagem baixa', () => {
   assert.match(mesaCss, /max-width:\s*900px[\s\S]*\.burn-area[\s\S]*display:\s*none/);
   assert.match(mesaCss, /orientation:\s*landscape[\s\S]*\.burn-area[\s\S]*display:\s*none/);
+});
+
+test('008: faixa dos 13 ranks quebra no HUD e não força grade 2×3', () => {
+  assert.match(hudCss, /\.hud__opcoes--ranks/);
+  assert.match(hudCss, /\.hud__opcoes--ranks[\s\S]*flex-wrap:\s*wrap/);
+  assert.equal(/hud__opcoes--ranks[\s\S]{0,180}repeat\(2/.test(hudCss), false);
+  assert.match(fonteMesa, /hud__opcoes--ranks/);
+  assert.match(hudCss, /\.hud__suposicao/);
 });
 
 test('UX-20: heading, main, viewport-fit e recorte seguro', () => {
