@@ -33,7 +33,7 @@ function celula(acertos, erros) {
   return { acertos, erros, exposicoes: acertos + erros };
 }
 
-test('evolucaoZerada tem 10+10+1 zerados e exposicoes = acertos + erros', () => {
+test('evolucaoZerada tem 10+10+1+1+1 zerados e exposicoes = acertos + erros', () => {
   const zero = evolucaoZerada();
   assert.equal(CATEGORIA_IDS.length, 10);
   assert.deepEqual(Object.keys(zero.mao_atual), [...CATEGORIA_IDS]);
@@ -47,6 +47,8 @@ test('evolucaoZerada tem 10+10+1 zerados e exposicoes = acertos + erros', () => 
     );
   }
   assert.deepEqual(zero.vencedor_pote, celula(0, 0));
+  assert.deepEqual(zero.outs, celula(0, 0));
+  assert.deepEqual(zero.odds, celula(0, 0));
 });
 
 test('chave ausente: ler() = zeros e 0 setItem', () => {
@@ -77,7 +79,7 @@ test('delta acerto Flush mao_atual grava as 10 chaves; par permanece 0', () => {
   assert.equal(bruto.mao_atual.flush.exposicoes, 1);
   assert.deepEqual(bruto.mao_atual.par, celula(0, 0));
   assert.ok('par' in bruto.mao_atual);
-  assert.equal(Object.keys(bruto).sort().join(','), 'mao_atual,upgrade,vencedor_pote');
+  assert.equal(Object.keys(bruto).sort().join(','), 'mao_atual,odds,outs,upgrade,vencedor_pote');
 });
 
 test('segundo delta na mesma célula soma (não é a regra de 1ª tentativa do quiz)', () => {
@@ -220,4 +222,71 @@ test('célula negativa ou não inteira vira 0 naquela célula só', () => {
   assert.deepEqual(lido.mao_atual.flush, celula(0, 2));
   assert.deepEqual(lido.mao_atual.par, celula(4, 1));
   assert.deepEqual(lido.vencedor_pote, celula(0, 0));
+});
+
+test('JSON da 003 (três buckets) é legível: Flush preservado, outs/odds = 0', () => {
+  const { api } = memoria();
+  api.setItem(
+    CHAVE_EVOLUCAO,
+    JSON.stringify({
+      mao_atual: { flush: { acertos: 1, erros: 0, exposicoes: 1 } },
+      upgrade: {},
+      vencedor_pote: { acertos: 0, erros: 0, exposicoes: 0 },
+    }),
+  );
+  const lido = criarStorage({ api }).ler();
+  assert.equal(lido.mao_atual.flush.acertos, 1);
+  assert.deepEqual(lido.outs, celula(0, 0));
+  assert.deepEqual(lido.odds, celula(0, 0));
+});
+
+test('deltas outs e odds são grupos únicos; categoria em outs é ignorada', () => {
+  const storage = criarStorage({ api: memoria().api });
+  storage.aplicarDeltas({ bucket: 'outs', erros: 1 });
+  let lido = storage.ler();
+  assert.equal(lido.outs.erros, 1);
+  assert.equal(lido.outs.acertos, 0);
+  assert.equal(lido.outs.exposicoes, 1);
+  assert.deepEqual(lido.odds, celula(0, 0));
+  storage.aplicarDeltas({ bucket: 'outs', acertos: 1 });
+  lido = storage.ler();
+  assert.equal(lido.outs.acertos, 1);
+  assert.equal(lido.outs.erros, 1);
+  assert.equal(lido.outs.exposicoes, 2);
+  storage.aplicarDeltas({ bucket: 'odds', acertos: 1 });
+  lido = storage.ler();
+  assert.equal(lido.odds.acertos, 1);
+  assert.equal(lido.outs.exposicoes, 2);
+  storage.aplicarDeltas({ bucket: 'outs', categoria: 'par', acertos: 1 });
+  lido = storage.ler();
+  assert.equal(lido.outs.acertos, 2);
+  assert.equal(lido.mao_atual.par.acertos, 0);
+});
+
+test('outs sem mao_atual preserva outs e zera mao_atual', () => {
+  const { api } = memoria();
+  api.setItem(CHAVE_EVOLUCAO, JSON.stringify({ outs: { acertos: 2, erros: 0, exposicoes: 2 } }));
+  const lido = criarStorage({ api }).ler();
+  assert.equal(lido.outs.acertos, 2);
+  assert.deepEqual(lido.mao_atual.flush, celula(0, 0));
+});
+
+test('chave extra vilao é ignorada e não ecoa na gravação', () => {
+  const { map, api } = memoria();
+  api.setItem(
+    CHAVE_EVOLUCAO,
+    JSON.stringify({
+      mao_atual: { flush: { acertos: 1, erros: 0, exposicoes: 1 } },
+      upgrade: {},
+      vencedor_pote: { acertos: 0, erros: 0, exposicoes: 0 },
+      vilao: { cartas: [] },
+    }),
+  );
+  const storage = criarStorage({ api });
+  const lido = storage.ler();
+  assert.equal('vilao' in lido, false);
+  storage.gravar(lido);
+  const bruto = JSON.parse(map.get(CHAVE_EVOLUCAO));
+  assert.equal('vilao' in bruto, false);
+  assert.deepEqual(Object.keys(bruto).sort(), ['mao_atual', 'odds', 'outs', 'upgrade', 'vencedor_pote']);
 });

@@ -60,6 +60,39 @@ function acertarUpgradeExibido(sessao) {
   aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
 }
 
+function acertarPassoAtual(sessao) {
+  const passo = sessao.mao?.passo;
+  if (!passo) return;
+  if (
+    passo === PASSOS.flop_upgrade ||
+    passo === PASSOS.turn_upgrade ||
+    passo === PASSOS.flop_ranks ||
+    passo === PASSOS.turn_ranks
+  ) {
+    acertarUpgradeExibido(sessao);
+    return;
+  }
+  if (sessao.mao.corretaUnica != null) {
+    acertarUnica(sessao, sessao.mao.corretaUnica);
+  }
+}
+
+function concluirCincoOito(sessao) {
+  const passos = new Set([
+    PASSOS.flop_outs,
+    PASSOS.flop_ranks,
+    PASSOS.flop_odds,
+    PASSOS.turn_outs,
+    PASSOS.turn_ranks,
+    PASSOS.turn_odds,
+  ]);
+  let guarda = 0;
+  while (sessao.mao && passos.has(sessao.mao.passo) && guarda < 6) {
+    acertarPassoAtual(sessao);
+    guarda += 1;
+  }
+}
+
 function concluirPosMaoAtual(sessao) {
   if (sessao.hud.estado === 'ociosa') return;
   if (sessao.hud.estado === 'sem_upgrade') {
@@ -69,6 +102,7 @@ function concluirPosMaoAtual(sessao) {
   if (sessao.mao?.passo === PASSOS.flop_upgrade || sessao.mao?.passo === PASSOS.turn_upgrade) {
     acertarUpgradeExibido(sessao);
   }
+  concluirCincoOito(sessao);
 }
 
 function payloadParFlop() {
@@ -643,6 +677,7 @@ test('flop e turn não-skip: duas 1ªs Confirmar em upgrade; 0 toque em mao_atua
   const vencedorAntes = JSON.stringify(sessao.evolucao.vencedor_pote);
   acertarUpgradeExibido(sessao);
   assert.equal(JSON.stringify(sessao.evolucao.mao_atual), maoAntes);
+  concluirCincoOito(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
   acertarHeroStreet(sessao);
   assert.equal(sessao.mao.passo, PASSOS.turn_upgrade);
@@ -729,7 +764,7 @@ test('reload no showdown aborta a mão e preserva contadores; blob só 3 buckets
   assert.equal(deNovo.mao, null);
   assert.equal(deNovo.evolucao.mao_atual.flush.erros, 1);
   const blob = JSON.parse(map.get(CHAVE_EVOLUCAO));
-  assert.deepEqual(Object.keys(blob).sort(), ['mao_atual', 'upgrade', 'vencedor_pote']);
+  assert.deepEqual(Object.keys(blob).sort(), ['mao_atual', 'odds', 'outs', 'upgrade', 'vencedor_pote']);
   const json = JSON.stringify(blob);
   assert.equal(/chaveDesempate/.test(json), false);
   assert.equal(/Melhor5/.test(json), false);
@@ -751,6 +786,92 @@ test('mesa.js não importa motor.js nem chama localStorage; foca primeiro habili
   assert.ok(fonteMesa.includes('focarPrimeiroHabilitado'));
   assert.ok(fonteMesa.includes('prepararShowdown'));
   assert.equal(/Embaralhar/.test(fonteMesa), false);
+});
+
+function payloadCA033Hud() {
+  return payloadDeOnze([
+    { rank: '2', naipe: 'copas' },
+    { rank: '3', naipe: 'copas' },
+    { rank: '4', naipe: 'copas' },
+    { rank: '6', naipe: 'copas' },
+    { rank: 'K', naipe: 'paus' },
+    { rank: 'Q', naipe: 'ouros' },
+    { rank: '10', naipe: 'espadas' },
+    { rank: '9', naipe: 'ouros' },
+    { rank: '5', naipe: 'paus' },
+    { rank: '2', naipe: 'ouros' },
+    { rank: '3', naipe: 'ouros' },
+  ]);
+}
+
+test('008: 5.3 ainda não acertada → 0 upgrade / 0 linha / 0 Confirmar', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'flop_hero', payloadCA033Hud());
+  assert.equal(sessao.mao.passo, PASSOS.flop_hero);
+  assert.equal(sessao.hud.cta, null);
+  assert.equal(sessao.hud.linhaSuposicao, null);
+  assert.notEqual(sessao.mao.passo, PASSOS.flop_upgrade);
+  assert.notEqual(sessao.mao.street, 'turn');
+});
+
+test('008: acerto da 5.4 abre flop_outs; turn fechado; A/B verso', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'flop_upgrade', payloadCA033Hud());
+  assert.equal(sessao.hud.linhaSuposicao, 'Suponha que o adversário já tem o par mais alto da mesa.');
+  acertarUpgradeExibido(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.flop_outs);
+  assert.equal(sessao.hud.enunciado, COPY.enunciadoOuts);
+  assert.equal(sessao.mao.street, 'flop');
+  assert.notEqual(sessao.mao.street, 'turn');
+  for (const assento of sessao.assentos) {
+    if (assento.id === 'voce') continue;
+    for (const carta of assento.hole) {
+      assert.equal(carta.visibilidade, 'verso');
+    }
+  }
+});
+
+test('008: skip da 5.4 não abre 5.8; Continuar abre o turn', () => {
+  const sessao = criarSessao();
+  ate(
+    sessao,
+    'flop_hero',
+    payloadDeOnze([
+      { rank: '2', naipe: 'copas' },
+      { rank: '3', naipe: 'copas' },
+      { rank: '4', naipe: 'copas' },
+      { rank: '5', naipe: 'copas' },
+      { rank: 'A', naipe: 'espadas' },
+      { rank: 'K', naipe: 'espadas' },
+      { rank: 'Q', naipe: 'espadas' },
+      { rank: 'J', naipe: 'espadas' },
+      { rank: '10', naipe: 'espadas' },
+      { rank: '2', naipe: 'ouros' },
+      { rank: '3', naipe: 'ouros' },
+    ]),
+  );
+  acertarHeroStreet(sessao);
+  assert.equal(sessao.hud.estado, 'sem_upgrade');
+  assert.equal(sessao.mao.passo, PASSOS.flop_skip);
+  aplicar(sessao, EVENTOS.CONTINUAR);
+  assert.equal(sessao.mao.street, 'turn');
+  assert.notEqual(sessao.mao.passo, PASSOS.flop_outs);
+});
+
+test('008: acerto da odd do flop abre o turn; erro na odd não avança street', () => {
+  const sessao = criarSessao();
+  ate(sessao, 'flop_upgrade', payloadCA033Hud());
+  acertarUpgradeExibido(sessao);
+  acertarUnica(sessao, sessao.mao.corretaUnica);
+  acertarUpgradeExibido(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.flop_odds);
+  const morta = sessao.hud.opcoes.find((item) => !item.verdadeira);
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: morta.id });
+  assert.equal(sessao.mao.passo, PASSOS.flop_odds);
+  assert.equal(sessao.mao.street, 'flop');
+  assert.equal(sessao.evolucao.odds.erros, 1);
+  acertarUnica(sessao, sessao.mao.corretaUnica);
+  assert.equal(sessao.mao.street, 'turn');
 });
 
 test('categoriasIdentificadas só no resultado; 0 rótulo nas cartas', () => {

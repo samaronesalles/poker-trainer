@@ -1,4 +1,4 @@
-/* HUD barra de aùùo ù largura da mesa, alvos grandes, :focus-visible. */
+/* HUD barra de a??o ? largura da mesa, alvos grandes, :focus-visible. */
 
 .hud {
   --mesa-max-w: 1400px;
@@ -45,6 +45,7 @@
 
 .hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__street,
 .hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__linha,
+.hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__suposicao,
 .hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__hint,
 .hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__feedback,
 .hud[data-hud-estado='perguntando'][data-modo='multipla'] .hud__opcoes {
@@ -82,6 +83,13 @@
   margin: 0 0 0.65rem;
   font-size: 1.05rem;
   letter-spacing: 0.01em;
+}
+
+.hud__suposicao {
+  margin: -0.35rem 0 0.45rem;
+  font-size: 0.88rem;
+  font-style: italic;
+  color: #c9b892;
 }
 
 .hud__hint {
@@ -141,6 +149,20 @@
   grid-template-columns: repeat(3, minmax(140px, 1fr));
   gap: 0.45rem;
   width: 100%;
+}
+
+.hud__opcoes--ranks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.4rem;
+  grid-template-columns: none;
+}
+
+.hud__opcoes--ranks .btn--opcao {
+  min-height: 40px;
+  min-width: 3.35rem;
+  padding: 0.32rem 0.55rem;
+  flex: 0 1 auto;
 }
 
 .btn {
@@ -288,6 +310,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .hud__opcoes--ranks {
+    display: flex;
+    flex-wrap: wrap;
+    grid-template-columns: none;
+  }
+
   .hud__opcoes--pote {
     grid-template-columns: 1fr;
   }
@@ -376,6 +404,12 @@
 
   .hud__opcoes {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hud__opcoes--ranks {
+    display: flex;
+    flex-wrap: wrap;
+    grid-template-columns: none;
   }
 
   .hud__opcoes--pote {

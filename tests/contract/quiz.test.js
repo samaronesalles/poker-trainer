@@ -11,6 +11,8 @@ import {
   apresentarPergunta,
   decidirAposShowdown,
   decidirPosMaoAtual,
+  enunciadoDoPasso,
+  modoDoPasso,
   prepararShowdown,
   shuffleOpcoes,
 } from '../../js/quiz.js';
@@ -104,6 +106,40 @@ function acertarUpgradeExibido(sessao) {
   aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
 }
 
+function acertarPassoAtual(sessao) {
+  const passo = sessao.mao?.passo;
+  if (!passo) return;
+  if (
+    passo === PASSOS.flop_upgrade ||
+    passo === PASSOS.turn_upgrade ||
+    passo === PASSOS.flop_ranks ||
+    passo === PASSOS.turn_ranks
+  ) {
+    acertarUpgradeExibido(sessao);
+    return;
+  }
+  if (sessao.mao.corretaUnica != null) {
+    aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: sessao.mao.corretaUnica });
+    aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
+  }
+}
+
+function concluirCincoOito(sessao) {
+  const passos = new Set([
+    PASSOS.flop_outs,
+    PASSOS.flop_ranks,
+    PASSOS.flop_odds,
+    PASSOS.turn_outs,
+    PASSOS.turn_ranks,
+    PASSOS.turn_odds,
+  ]);
+  let guarda = 0;
+  while (sessao.mao && passos.has(sessao.mao.passo) && guarda < 6) {
+    acertarPassoAtual(sessao);
+    guarda += 1;
+  }
+}
+
 function concluirPosMaoAtual(sessao) {
   if (sessao.hud.estado === 'ociosa') return;
   if (sessao.hud.estado === 'sem_upgrade') {
@@ -113,6 +149,7 @@ function concluirPosMaoAtual(sessao) {
   if (sessao.mao?.passo === PASSOS.flop_upgrade || sessao.mao?.passo === PASSOS.turn_upgrade) {
     acertarUpgradeExibido(sessao);
   }
+  concluirCincoOito(sessao);
 }
 
 function ateTurnHero(sessao, payload = payloadParFlop()) {
@@ -158,6 +195,21 @@ function sessaoUpgradeConstruido(conjunto, rng = Math.random) {
   const sessao = sessaoNova();
   ateFlopHero(sessao);
   acertarHero(sessao);
+  const snap = {
+    ok: true,
+    street: 'flop',
+    lista: [...conjunto.verdadeiros],
+    conjunto,
+    categoriaAtual: 'par',
+    vilao: { categoriaFeita: 'par', linhaId: 'par_mais_alto' },
+    outs: [],
+    n: conjunto.verdadeiros.length >= 1 ? 1 : 0,
+    ranks: [],
+    odd: conjunto.verdadeiros.length >= 1 ? { x: 4, rotulo: '4:1' } : null,
+    quantidade: null,
+    opcoesOdd: null,
+  };
+  sessao.mao.descontoStreet = snap;
   sessao.mao.upgradesStreet = {
     ok: true,
     lista: [...conjunto.verdadeiros],
@@ -280,7 +332,7 @@ test('§5.4 acerto flop + beat → flop_upgrade, não turn', () => {
   ateFlopHero(sessao);
   acertarHero(sessao);
   assert.equal(sessao.mao.passo, PASSOS.flop_upgrade);
-  assert.equal(sessao.hud.enunciado, 'Quais mãos você ainda não tem, mas ainda pode formar?');
+  assert.equal(sessao.hud.enunciado, 'Quais mãos melhoram o seu jogo com chance de ganhar o pote?');
   assert.equal(sessao.hud.opcoes.length, 6);
   assert.equal(sessao.hud.cta?.nome, COPY.ctaConfirmar);
   assert.notEqual(sessao.mao.street, 'turn');
@@ -426,15 +478,15 @@ test('conjunto só Flush na 1ª Confirmar: acerto + beat', () => {
 
 test('§5.5–5.6 turn pousado: nova pergunta; 1ª tentativa nova; beat → turn_upgrade', () => {
   const sessao = sessaoNova();
-  ateTurnHero(sessao, payloadParFlopDoisParesTurn());
+  ateTurnHero(sessao, payloadTurnDoisUpgrades());
   assert.equal(sessao.hud.enunciado, 'Qual mão você tem agora?');
   assert.equal(sessao.hud.opcoes.length, 6);
-  assert.equal(sessao.mao.corretaUnica, 'dois_pares');
-  assert.equal(sessao.evolucao.mao_atual.par.acertos, 1);
-  assert.equal(sessao.evolucao.mao_atual.dois_pares.exposicoes, 0);
-  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: 'dois_pares' });
-  assert.equal(sessao.evolucao.mao_atual.dois_pares.acertos, 1);
-  assert.equal(sessao.evolucao.mao_atual.dois_pares.exposicoes, 1);
+  assert.equal(sessao.mao.corretaUnica, 'trinca');
+  assert.equal(sessao.evolucao.mao_atual.trinca.acertos, 1);
+  assert.equal(sessao.evolucao.mao_atual.trinca.exposicoes, 1);
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: 'trinca' });
+  assert.equal(sessao.evolucao.mao_atual.trinca.acertos, 2);
+  assert.equal(sessao.evolucao.mao_atual.trinca.exposicoes, 2);
   aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
   assert.equal(sessao.mao.passo, PASSOS.turn_upgrade);
   assert.equal(sessao.hud.estado, 'perguntando');
@@ -617,6 +669,9 @@ test('CA-015 turn com exatamente 2 upgrades: 2 verdadeiras + 4 distratoras', () 
   assert.ok(verdadeiras.includes('quadra'));
   assert.ok(verdadeiras.includes('full_house'));
   acertarUpgradeExibido(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.turn_outs);
+  assert.notEqual(sessao.mao.street, 'river');
+  concluirCincoOito(sessao);
   assert.equal(sessao.mao.street, 'river');
   assert.notEqual(sessao.mao.passo, PASSOS.turn_upgrade);
 });
@@ -699,7 +754,7 @@ test('5.4: 0 marcar todas; 0 draws/kickers/Sequência/chaveDesempate no HUD', ()
     JSON.stringify(sessao.hud),
   ].join(' | ');
   assert.equal(/marcar todas/i.test(textos), false);
-  assert.equal(/draw|gutshot|outs|oesd|flush draw|straight draw/i.test(textos), false);
+  assert.equal(/gutshot|oesd|flush draw|straight draw|Pot Odds|regra do 4/i.test(textos), false);
   assert.equal(/par de (reis|ases)/i.test(textos), false);
   assert.equal(/Sequência/.test(textos), false);
   assert.equal(/chaveDesempate/.test(textos), false);
@@ -712,8 +767,10 @@ test('flop e turn não-skip: duas 1ªs Confirmar independentes em upgrade', () =
   ateFlopHero(sessao, payloadTurnDoisUpgrades());
   acertarHero(sessao);
   acertarUpgradeExibido(sessao);
+  concluirCincoOito(sessao);
   aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
   acertarHero(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.turn_upgrade);
   const depoisFlop = JSON.stringify(sessao.evolucao.upgrade);
   acertarUpgradeExibido(sessao);
   assert.notEqual(JSON.stringify(sessao.evolucao.upgrade), depoisFlop);
@@ -884,4 +941,155 @@ test('fonte do quiz: 0 stub Flush/Par/indiceMaoSessao como verdade; 0 river_upgr
   assert.equal(fonteQuiz.includes('river_upgrade'), false);
   assert.ok(fonteQuiz.includes('prepararShowdown'));
   assert.ok(fonteQuiz.includes('quemGanhou'));
+});
+
+function payloadCA033() {
+  return payloadDeOnze([
+    carta('2', 'copas'),
+    carta('3', 'copas'),
+    carta('4', 'copas'),
+    carta('6', 'copas'),
+    carta('K', 'paus'),
+    carta('Q', 'ouros'),
+    carta('10', 'espadas'),
+    carta('9', 'ouros'),
+    carta('5', 'paus'),
+    carta('2', 'ouros'),
+    carta('3', 'ouros'),
+  ]);
+}
+
+test('008 copy 5.4/skip canônicos; 005 histórico some', () => {
+  assert.equal(COPY.enunciadoUpgrades, 'Quais mãos melhoram o seu jogo com chance de ganhar o pote?');
+  assert.equal(COPY.semUpgrade, 'Não há mão que vire o pote.');
+  assert.equal(COPY.enunciadoOuts, 'Quantas outs você tem?');
+  assert.equal(COPY.enunciadoRanks, 'Quais ranks são outs?');
+  assert.equal(COPY.enunciadoOdd, 'Qual é a sua odd?');
+  assert.equal(COPY.enunciadoUpgrades.includes('ainda pode formar'), false);
+  assert.equal(COPY.semUpgrade.includes('upgrade possível'), false);
+  assert.equal(/Pot Odds|regra do 4|flush draw|gutshot|overcards/.test(JSON.stringify(COPY)), false);
+});
+
+test('CA-033: linha RN-059 + 5.4 múltipla; acerto abre outs com N=10', () => {
+  const sessao = sessaoNova();
+  ateFlopHero(sessao, payloadCA033());
+  acertarHero(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.flop_upgrade);
+  assert.equal(sessao.hud.enunciado, COPY.enunciadoUpgrades);
+  assert.equal(sessao.hud.linhaSuposicao, 'Suponha que o adversário já tem o par mais alto da mesa.');
+  assert.equal(sessao.mao.modo, 'multipla');
+  assert.equal(sessao.hud.cta?.nome, COPY.ctaConfirmar);
+  const ids = sessao.hud.opcoes.filter((item) => item.verdadeira).map((item) => item.id);
+  assert.ok(ids.includes('par'));
+  assert.ok(ids.includes('straight'));
+  acertarUpgradeExibido(sessao);
+  assert.equal(sessao.mao.passo, PASSOS.flop_outs);
+  assert.equal(sessao.hud.enunciado, COPY.enunciadoOuts);
+  assert.equal(sessao.mao.street, 'flop');
+  assert.equal(sessao.hud.opcoes.length, 6);
+  assert.equal(sessao.hud.cta, null);
+  assert.equal(sessao.mao.corretaUnica, 10);
+  assert.equal(sessao.hud.opcoes.some((item) => item.rotulo === '10' && item.verdadeira), true);
+});
+
+test('CA-046: erro na quantidade + acerto depois; ranks é nova exposição; odd só odds', () => {
+  const sessao = sessaoNova();
+  ateFlopHero(sessao, payloadCA033());
+  acertarHero(sessao);
+  acertarUpgradeExibido(sessao);
+  const morta = sessao.hud.opcoes.find((item) => !item.verdadeira);
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: morta.id });
+  assert.equal(sessao.evolucao.outs.erros, 1);
+  assert.equal(sessao.evolucao.outs.acertos, 0);
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: 10 });
+  aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
+  assert.equal(sessao.evolucao.outs.acertos, 0);
+  assert.equal(sessao.mao.passo, PASSOS.flop_ranks);
+  assert.equal(sessao.hud.opcoes.length, 13);
+  assert.deepEqual(
+    sessao.hud.opcoes.map((item) => item.rotulo).sort(),
+    ['10', '2', '3', '4', '5', '6', '7', '8', '9', 'Dama', 'Rei', 'Valete', 'Ás'].sort(),
+  );
+  for (const item of sessao.hud.opcoes.filter((opcao) => opcao.verdadeira)) {
+    aplicar(sessao, EVENTOS.ALTERNAR_OPCAO, { id: item.id });
+  }
+  aplicar(sessao, EVENTOS.CONFIRMAR);
+  aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
+  assert.equal(sessao.evolucao.outs.acertos, 1);
+  assert.equal(sessao.evolucao.outs.erros, 1);
+  assert.equal(sessao.evolucao.outs.exposicoes, 2);
+  assert.equal(sessao.mao.passo, PASSOS.flop_odds);
+  assert.equal(sessao.hud.enunciado, COPY.enunciadoOdd);
+  const certaOdd = sessao.hud.opcoes.find((item) => item.verdadeira);
+  assert.equal(certaOdd.rotulo, '4:1');
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: certaOdd.id });
+  assert.equal(sessao.evolucao.odds.acertos, 1);
+  assert.equal(sessao.evolucao.outs.exposicoes, 2);
+});
+
+test('skip da 5.4 não abre 5.8 nem grava outs/odds', () => {
+  const sessao = sessaoNova();
+  ateFlopHero(sessao, payloadRoyalFlop());
+  const outsAntes = JSON.stringify(sessao.evolucao.outs);
+  const oddsAntes = JSON.stringify(sessao.evolucao.odds);
+  acertarHero(sessao);
+  assert.equal(sessao.hud.estado, 'sem_upgrade');
+  assert.equal(COPY.semUpgrade, 'Não há mão que vire o pote.');
+  assert.notEqual(sessao.mao.passo, PASSOS.flop_outs);
+  assert.equal(JSON.stringify(sessao.evolucao.outs), outsAntes);
+  assert.equal(JSON.stringify(sessao.evolucao.odds), oddsAntes);
+});
+
+test('river não devolve 5.4/5.8; flop e turn não fundem deltas', () => {
+  assert.equal(enunciadoDoPasso(PASSOS.river_hero), COPY.enunciadoHero);
+  assert.notEqual(enunciadoDoPasso(PASSOS.river_hero), COPY.enunciadoOuts);
+  assert.notEqual(enunciadoDoPasso(PASSOS.river_vencedor), COPY.enunciadoOdd);
+  assert.equal(modoDoPasso(PASSOS.river_hero), 'unica');
+  const sessao = sessaoNova();
+  ateFlopHero(sessao, payloadCA033());
+  acertarHero(sessao);
+  acertarUpgradeExibido(sessao);
+  concluirCincoOito(sessao);
+  const outsFlop = sessao.evolucao.outs.exposicoes;
+  aplicar(sessao, EVENTOS.FIM_ANIMACAO_STREET, { etapa: 'turn' });
+  acertarHero(sessao);
+  if (sessao.mao.passo === PASSOS.turn_upgrade) {
+    acertarUpgradeExibido(sessao);
+    if (sessao.mao.passo === PASSOS.turn_outs) {
+      assert.ok(sessao.evolucao.outs.exposicoes >= outsFlop);
+    }
+  }
+});
+
+test('CA-037 / ranks: 1ª Confirmar vazio em ranks grava outs.erros; pergunta aberta', () => {
+  const sessao = sessaoNova();
+  ateFlopHero(sessao, payloadCA033());
+  acertarHero(sessao);
+  acertarUpgradeExibido(sessao);
+  aplicar(sessao, EVENTOS.ESCOLHER_OPCAO, { id: 10 });
+  aplicar(sessao, EVENTOS.FIM_BEAT_ACERTO);
+  assert.equal(sessao.mao.passo, PASSOS.flop_ranks);
+  aplicar(sessao, EVENTOS.CONFIRMAR);
+  assert.equal(sessao.evolucao.outs.erros, 1);
+  assert.equal(sessao.evolucao.outs.acertos, 1);
+  assert.equal(sessao.mao.passo, PASSOS.flop_ranks);
+  assert.equal(sessao.hud.estado, 'perguntando');
+  assert.ok(sessao.hud.opcoes.some((item) => item.verdadeira && item.ativavel));
+});
+
+test('CA-047: acerto de primeira nas três 5.8 grava só os cinco buckets', () => {
+  const { map, api } = memoria();
+  const sessao = sessaoNova(api);
+  ateFlopHero(sessao, payloadCA033());
+  acertarHero(sessao);
+  acertarUpgradeExibido(sessao);
+  concluirCincoOito(sessao);
+  const blob = JSON.parse(map.get(CHAVE_EVOLUCAO));
+  assert.deepEqual(Object.keys(blob).sort(), ['mao_atual', 'odds', 'outs', 'upgrade', 'vencedor_pote']);
+  const json = JSON.stringify(blob);
+  assert.equal(/vilao|cartasJogo|information|rank|raz[aã]o|outs":\[/.test(json), false);
+  assert.equal(json.includes('par_mais_alto'), false);
+  assert.equal(map.has('poker-trainer:colinha'), false);
+  assert.ok(sessao.evolucao.outs.acertos >= 2);
+  assert.ok(sessao.evolucao.odds.acertos >= 1);
 });

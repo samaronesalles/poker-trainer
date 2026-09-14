@@ -32,6 +32,8 @@ export function evolucaoZerada() {
     mao_atual: mapaCategoriasZero(),
     upgrade: mapaCategoriasZero(),
     vencedor_pote: celulaZero(),
+    outs: celulaZero(),
+    odds: celulaZero(),
   };
 }
 
@@ -74,6 +76,12 @@ function garantirSchema(evolucao) {
   if (objetoPlano(evolucao.vencedor_pote)) {
     out.vencedor_pote = celulaDe(evolucao.vencedor_pote);
   }
+  if (objetoPlano(evolucao.outs)) {
+    out.outs = celulaDe(evolucao.outs);
+  }
+  if (objetoPlano(evolucao.odds)) {
+    out.odds = celulaDe(evolucao.odds);
+  }
   return out;
 }
 
@@ -88,8 +96,8 @@ function aplicarSomas(evolucao, deltas) {
   const lista = Array.isArray(deltas) ? deltas : [deltas];
   for (const delta of lista) {
     if (!delta || typeof delta !== 'object') continue;
-    if (delta.bucket === 'vencedor_pote') {
-      somarCelula(evolucao.vencedor_pote, delta);
+    if (delta.bucket === 'vencedor_pote' || delta.bucket === 'outs' || delta.bucket === 'odds') {
+      somarCelula(evolucao[delta.bucket], delta);
       continue;
     }
     if (delta.bucket === 'mao_atual' || delta.bucket === 'upgrade') {
@@ -133,11 +141,17 @@ export function criarStorage({ api, indisponivel = false } = {}) {
     const temMao = objetoPlano(parsed.mao_atual);
     const temUpgrade = objetoPlano(parsed.upgrade);
     const temVencedor = objetoPlano(parsed.vencedor_pote);
-    if (!temMao && !temUpgrade && !temVencedor) return { tipo: 'corrupto' };
+    const temOuts = objetoPlano(parsed.outs);
+    const temOdds = objetoPlano(parsed.odds);
+    if (!temMao && !temUpgrade && !temVencedor && !temOuts && !temOdds) {
+      return { tipo: 'corrupto' };
+    }
     const out = evolucaoZerada();
     if (temMao) preencherBucket(out.mao_atual, parsed.mao_atual);
     if (temUpgrade) preencherBucket(out.upgrade, parsed.upgrade);
     if (temVencedor) out.vencedor_pote = celulaDe(parsed.vencedor_pote);
+    if (temOuts) out.outs = celulaDe(parsed.outs);
+    if (temOdds) out.odds = celulaDe(parsed.odds);
     return { tipo: 'ok', evolucao: out };
   }
 

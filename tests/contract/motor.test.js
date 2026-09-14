@@ -7,12 +7,18 @@ import {
   CATEGORIAS,
   SEQUENCIAS_LEGAIS,
   UNIVERSO_POTE,
+  avaliarDescontoStreet,
   avaliarMelhor5,
+  baralhoProximaCarta,
   conjuntoOpcoesMaoAtual,
+  conjuntoOpcoesOdd,
+  conjuntoOpcoesQuantidade,
   conjuntoOpcoesUpgrade,
   conjuntoOpcoesVencedor,
   enumerarUpgrades,
+  oddDaProximaCarta,
   quemGanhou,
+  sintetizarVilaoAssumido,
   snapshotDesconhecido,
 } from '../../js/motor.js';
 
@@ -282,8 +288,7 @@ test('motor.js não importa quiz/mesa/storage nem persiste', () => {
   assert.equal(fonteMotor.includes('sessionStorage'), false);
   assert.equal(fonteMotor.includes('fetch('), false);
   assert.equal(fonteMotor.includes('sendBeacon'), false);
-  assert.ok(fonteMotor.includes('melhor 5 + RN-017'));
-  assert.ok(fonteMotor.includes('enumerador de upgrades'));
+  assert.ok(fonteMotor.includes('melhor 5 + quemGanhou + vilão assumido + desconto de outs + odd da próxima carta'));
   assert.ok(fonteMotor.includes('quemGanhou'));
   assert.equal(fonteMotor.includes('sem quemGanhou'), false);
   assert.equal(fonteMotor.includes('embaralhar'), false);
@@ -297,32 +302,46 @@ function enumerar(hole, board) {
   return enumerarUpgrades({ holeHeroi: hole, comunitarias: board });
 }
 
-test('§6.1 flop: 2 hole + 3 board → snapshot 47; turn +1 → 46', () => {
+test('008: baralho da próxima carta tem 45 no flop e 44 no turn', () => {
   const hole = [c('A', 'espadas'), c('K', 'copas')];
   const flop = [c('2', 'ouros'), c('5', 'paus'), c('9', 'espadas')];
-  const snapFlop = snapshotDesconhecido([...hole, ...flop]);
-  assert.equal(snapFlop.length, 47);
+  const vilaoFlop = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: flop });
+  assert.equal(vilaoFlop.ok, true);
+  const snapFlop = baralhoProximaCarta({
+    holeHeroi: hole,
+    comunitarias: flop,
+    assumidas: vilaoFlop.cartas,
+  });
+  assert.equal(snapFlop.length, 45);
   const turn = [...flop, c('3', 'copas')];
-  assert.equal(snapshotDesconhecido([...hole, ...turn]).length, 46);
+  const vilaoTurn = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: turn });
+  assert.equal(vilaoTurn.ok, true);
+  assert.equal(
+    baralhoProximaCarta({
+      holeHeroi: hole,
+      comunitarias: turn,
+      assumidas: vilaoTurn.cartas,
+    }).length,
+    44,
+  );
 });
 
-test('§6.2 snapshot não exclui holes de A/B ausentes das visíveis', () => {
-  const visiveis = [
-    c('A', 'espadas'),
-    c('K', 'copas'),
-    c('2', 'ouros'),
-    c('5', 'paus'),
-    c('9', 'espadas'),
-  ];
+test('008: baralho da próxima carta inclui holes de A/B se não forem assumidas', () => {
+  const hole = [c('A', 'espadas'), c('K', 'copas')];
+  const flop = [c('2', 'ouros'), c('5', 'paus'), c('9', 'espadas')];
   const holeA = [c('Q', 'ouros'), c('J', 'paus')];
-  const snap = snapshotDesconhecido(visiveis);
+  const vilao = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: flop });
+  const snap = baralhoProximaCarta({
+    holeHeroi: hole,
+    comunitarias: flop,
+    assumidas: vilao.cartas,
+  });
   const chaves = new Set(snap.map((carta) => `${carta.rank}-${carta.naipe}`));
-  assert.ok(chaves.has('Q-ouros'));
-  assert.ok(chaves.has('J-paus'));
-  assert.equal(
-    snap.some((carta) => carta.rank === holeA[0].rank && carta.naipe === holeA[0].naipe),
-    true,
-  );
+  const chaveA0 = `${holeA[0].rank}-${holeA[0].naipe}`;
+  const chaveA1 = `${holeA[1].rank}-${holeA[1].naipe}`;
+  const assumidas = new Set(vilao.cartas.map((carta) => `${carta.rank}-${carta.naipe}`));
+  if (!assumidas.has(chaveA0)) assert.ok(chaves.has(chaveA0));
+  if (!assumidas.has(chaveA1)) assert.ok(chaves.has(chaveA1));
 });
 
 test('§6.4 enumerarUpgrades não muta hole, board nem cartasJogo do caller', () => {
@@ -339,16 +358,16 @@ test('§6.4 enumerarUpgrades não muta hole, board nem cartasJogo do caller', ()
   assert.equal(JSON.stringify(cartasJogo), jogoAntes);
 });
 
-test('§6.5 testemunha só as 7 finais: Flush de 6 não substitui Full house das 7', () => {
+test('008: runner-runner (duas cartas) não testemunha upgrade no flop', () => {
   const hole = [c('7', 'espadas'), c('7', 'copas')];
   const flop = [c('A', 'espadas'), c('K', 'espadas'), c('3', 'espadas')];
   const seisFlush = [...hole, ...flop, c('2', 'espadas')];
   const seteFh = [...hole, ...flop, c('7', 'ouros'), c('A', 'copas')];
   assert.equal(avaliarMelhor5(seisFlush).categoriaId, 'flush');
   assert.equal(avaliarMelhor5(seteFh).categoriaId, 'full_house');
-  const resultado = enumerar(hole, flop);
+  const resultado = avaliarDescontoStreet({ holeHeroi: hole, comunitarias: flop });
   assert.equal(resultado.ok, true);
-  assert.ok(resultado.upgrades.includes('full_house'));
+  assert.equal(resultado.upgrades.includes('full_house'), false);
   assert.equal(resultado.upgrades.includes('carta_alta'), false);
   assert.equal('runouts' in resultado, false);
   assert.equal('chaveDesempate' in resultado, false);
@@ -372,10 +391,14 @@ test('§6.9 carta_alta nunca entra em upgrades', () => {
   assert.equal(resultado.upgrades.includes('carta_alta'), false);
 });
 
-test('§6.1 / §6.13 turn: snapshot 46; cada desconhecida como river testemunha Melhor5 das 7', () => {
+test('008 turn: baralho 44; cada desconhecida como river testemunha Melhor5 das 7', () => {
   const hole = [c('8', 'espadas'), c('8', 'copas')];
   const turn = [c('8', 'ouros'), c('2', 'paus'), c('9', 'espadas'), c('3', 'copas')];
-  assert.equal(snapshotDesconhecido([...hole, ...turn]).length, 46);
+  const vilao = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: turn });
+  assert.equal(
+    baralhoProximaCarta({ holeHeroi: hole, comunitarias: turn, assumidas: vilao.cartas }).length,
+    44,
+  );
   const resultado = enumerar(hole, turn);
   assert.equal(resultado.ok, true);
   assert.equal(resultado.categoriaAtual, 'trinca');
@@ -397,7 +420,7 @@ test('§6.11 1–5 upgrades: length 6, todos inclusos, resto distratoras forte�
   assert.deepEqual(distratoras, ['royal_flush', 'straight_flush', 'quadra', 'full_house']);
 });
 
-test('§6.12 CA-014: ≥7 upgrades → 6 mais fortes, 0 distratora, par/dois_pares/trinca fora', () => {
+test('conjuntoOpcoesUpgrade: ≥7 upgrades → 6 mais fortes, 0 distratora, par/dois_pares/trinca fora', () => {
   const upgrades = [
     'royal_flush',
     'straight_flush',
@@ -481,39 +504,39 @@ test('§6.15 as 9 categorias Royal…Par são upgrade em ≥1 fixture; Carta alt
   const fixtures = {
     royal_flush: {
       hole: [c('A', 'espadas'), c('K', 'espadas')],
-      board: [c('Q', 'espadas'), c('J', 'ouros'), c('2', 'paus')],
+      board: [c('Q', 'espadas'), c('J', 'espadas'), c('2', 'ouros')],
     },
     straight_flush: {
-      hole: [c('5', 'espadas'), c('6', 'espadas')],
-      board: [c('7', 'espadas'), c('2', 'copas'), c('9', 'ouros')],
+      hole: [c('9', 'espadas'), c('8', 'espadas')],
+      board: [c('7', 'espadas'), c('6', 'espadas'), c('2', 'ouros')],
     },
     quadra: {
       hole: [c('7', 'espadas'), c('7', 'copas')],
-      board: [c('7', 'ouros'), c('2', 'paus'), c('3', 'copas')],
+      board: [c('7', 'ouros'), c('K', 'paus'), c('2', 'espadas')],
     },
     full_house: {
       hole: [c('7', 'espadas'), c('7', 'copas')],
-      board: [c('2', 'ouros'), c('3', 'paus'), c('4', 'copas')],
+      board: [c('7', 'ouros'), c('K', 'paus'), c('2', 'espadas')],
     },
     flush: {
-      hole: [c('A', 'espadas'), c('3', 'espadas')],
-      board: [c('5', 'espadas'), c('7', 'copas'), c('9', 'ouros')],
+      hole: [c('A', 'copas'), c('K', 'copas')],
+      board: [c('2', 'copas'), c('7', 'copas'), c('9', 'ouros')],
     },
     straight: {
-      hole: [c('A', 'espadas'), c('3', 'copas')],
-      board: [c('4', 'ouros'), c('5', 'paus'), c('7', 'espadas')],
+      hole: [c('K', 'paus'), c('Q', 'ouros')],
+      board: [c('10', 'espadas'), c('9', 'ouros'), c('5', 'paus')],
     },
     trinca: {
-      hole: [c('A', 'espadas'), c('K', 'copas')],
-      board: [c('2', 'ouros'), c('5', 'paus'), c('8', 'espadas')],
+      hole: [c('8', 'espadas'), c('8', 'copas')],
+      board: [c('K', 'ouros'), c('4', 'paus'), c('2', 'espadas')],
     },
     dois_pares: {
-      hole: [c('A', 'espadas'), c('3', 'copas')],
-      board: [c('5', 'ouros'), c('7', 'paus'), c('9', 'espadas')],
+      hole: [c('A', 'espadas'), c('A', 'copas')],
+      board: [c('9', 'ouros'), c('5', 'paus'), c('2', 'espadas')],
     },
     par: {
-      hole: [c('A', 'espadas'), c('K', 'copas')],
-      board: [c('2', 'ouros'), c('5', 'paus'), c('8', 'espadas')],
+      hole: [c('K', 'paus'), c('Q', 'ouros')],
+      board: [c('10', 'espadas'), c('9', 'ouros'), c('5', 'paus')],
     },
   };
   const vistas = new Set();
@@ -935,4 +958,186 @@ test('§7.16 retorno feliz não tem runouts; chaveDesempate só em maos', () => 
   assert.equal(r.ok, true);
   assert.equal('runouts' in r, false);
   assert.ok(Array.isArray(r.maos.voce.chaveDesempate));
+});
+
+const CA033_HOLE = [c('K', 'paus'), c('Q', 'ouros')];
+const CA033_FLOP = [c('10', 'espadas'), c('9', 'ouros'), c('5', 'paus')];
+
+test('CA-033: vilão par mais alto; Par e Straight; par de 9 ou 5 não remove Par', () => {
+  const hole = CA033_HOLE.map((carta) => ({ ...carta }));
+  const flop = CA033_FLOP.map((carta) => ({ ...carta }));
+  const holeAntes = JSON.stringify(hole);
+  const flopAntes = JSON.stringify(flop);
+  const vilao = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: flop });
+  const street = avaliarDescontoStreet({ holeHeroi: hole, comunitarias: flop });
+  assert.equal(vilao.ok, true);
+  assert.equal(vilao.linhaId, 'par_mais_alto');
+  assert.equal(vilao.categoriaFeita, 'par');
+  assert.equal(street.ok, true);
+  assert.ok(street.upgrades.includes('par'));
+  assert.ok(street.upgrades.includes('straight'));
+  assert.equal(street.upgrades.includes('carta_alta'), false);
+  assert.equal(street.n, 10);
+  assert.deepEqual(street.ranks, ['K', 'Q', 'J']);
+  assert.equal(street.odd.rotulo, '4:1');
+  assert.equal(JSON.stringify(hole), holeAntes);
+  assert.equal(JSON.stringify(flop), flopAntes);
+});
+
+test('CA-034: único par perdedor não entra em upgrades', () => {
+  const street = avaliarDescontoStreet({
+    holeHeroi: [c('2', 'espadas'), c('3', 'copas')],
+    comunitarias: [c('A', 'paus'), c('K', 'ouros'), c('9', 'espadas')],
+  });
+  assert.equal(street.ok, true);
+  assert.equal(street.upgrades.includes('par'), false);
+});
+
+test('CA-039: Flush só runner-runner no flop não é upgrade', () => {
+  const street = avaliarDescontoStreet({
+    holeHeroi: [c('A', 'espadas'), c('K', 'copas')],
+    comunitarias: [c('2', 'ouros'), c('5', 'paus'), c('9', 'espadas')],
+  });
+  assert.equal(street.ok, true);
+  assert.equal(street.upgrades.includes('flush'), false);
+});
+
+test('CA-044 / RN-065: odd da próxima carta (regra do 2)', () => {
+  assert.equal(oddDaProximaCarta(4).rotulo, '11:1');
+  assert.equal(oddDaProximaCarta(9).rotulo, '5:1');
+  assert.notEqual(oddDaProximaCarta(9).rotulo, '4:1');
+  assert.equal(oddDaProximaCarta(10).rotulo, '4:1');
+  assert.equal(oddDaProximaCarta(1).rotulo, '49:1');
+  assert.equal(oddDaProximaCarta(20).rotulo, '1:1');
+  assert.equal(oddDaProximaCarta(25).rotulo, '1:1');
+  const qtd = conjuntoOpcoesQuantidade({ n: 10 });
+  assert.equal(qtd.ids.length, 6);
+  assert.equal(new Set(qtd.ids).size, 6);
+  assert.ok(qtd.ids.includes(10));
+  assert.ok(qtd.ids.every((n) => n >= 1 && n <= 47));
+  const odds = conjuntoOpcoesOdd({ x: 4 });
+  assert.equal(odds.ids.length, 6);
+  assert.ok(odds.ids.some((item) => item.rotulo === '4:1'));
+});
+
+test('CA-045: Jacks sujos não entram em N; J permanece se houver out limpo', () => {
+  const hole = [c('A', 'paus'), c('5', 'paus')];
+  const flop = [c('K', 'paus'), c('9', 'paus'), c('3', 'ouros')];
+  const street = avaliarDescontoStreet({ holeHeroi: hole, comunitarias: flop });
+  assert.equal(street.ok, true);
+  const vilao = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: flop });
+  const baralho = baralhoProximaCarta({
+    holeHeroi: hole,
+    comunitarias: flop,
+    assumidas: vilao.cartas,
+  });
+  assert.equal(baralho.filter((carta) => carta.rank === 'J').length, 4);
+  const jacks = street.outs.filter((carta) => carta.rank === 'J');
+  assert.equal(jacks.length, 1);
+  assert.ok(jacks.length < 4);
+  assert.ok(street.ranks.includes('J'));
+  assert.ok(street.n >= jacks.length);
+});
+
+test('RN-074: já com Par que vence — par ∉ upgrades e K ∈ ranks se for out', () => {
+  const street = avaliarDescontoStreet({
+    holeHeroi: [c('K', 'espadas'), c('K', 'copas')],
+    comunitarias: [c('9', 'ouros'), c('7', 'paus'), c('2', 'espadas')],
+  });
+  assert.equal(street.ok, true);
+  assert.equal(street.upgrades.includes('par'), false);
+  assert.ok(street.ranks.includes('K'));
+});
+
+test('turn remonta vilão e usa baralho de 44', () => {
+  const hole = [c('K', 'paus'), c('Q', 'ouros')];
+  const flop = [c('10', 'espadas'), c('9', 'ouros'), c('5', 'paus')];
+  const turn = [...flop, c('5', 'copas')];
+  const vFlop = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: flop });
+  const vTurn = sintetizarVilaoAssumido({ holeHeroi: hole, comunitarias: turn });
+  assert.equal(vFlop.ok && vTurn.ok, true);
+  const chave = (cartas) =>
+    [...cartas.map((carta) => `${carta.rank}-${carta.naipe}`)].sort().join('|');
+  assert.notEqual(chave(vFlop.cartas), chave(vTurn.cartas));
+  const baralho = baralhoProximaCarta({
+    holeHeroi: hole,
+    comunitarias: turn,
+    assumidas: vTurn.cartas,
+  });
+  assert.equal(baralho.length, 44);
+  const dois = conjuntoOpcoesUpgrade({ upgrades: ['quadra', 'full_house'] });
+  assert.equal(dois.ids.length, 6);
+  assert.deepEqual(dois.verdadeiros, ['quadra', 'full_house']);
+});
+
+test('dois pares no board com full house feito → linha rotulo', () => {
+  const vilao = sintetizarVilaoAssumido({
+    holeHeroi: [c('A', 'espadas'), c('K', 'copas')],
+    comunitarias: [c('9', 'ouros'), c('9', 'paus'), c('5', 'espadas'), c('5', 'copas')],
+  });
+  assert.equal(vilao.ok, true);
+  assert.equal(vilao.categoriaFeita, 'full_house');
+  assert.equal(vilao.linhaId, 'rotulo');
+});
+
+test('texturas: unpaired → par_mais_alto; par no board → trinca_do_par; 3 naipe → flush; 4 seq → straight', () => {
+  assert.equal(
+    sintetizarVilaoAssumido({
+      holeHeroi: [c('2', 'copas'), c('3', 'ouros')],
+      comunitarias: [c('K', 'paus'), c('8', 'espadas'), c('4', 'ouros')],
+    }).linhaId,
+    'par_mais_alto',
+  );
+  assert.equal(
+    sintetizarVilaoAssumido({
+      holeHeroi: [c('2', 'copas'), c('3', 'ouros')],
+      comunitarias: [c('K', 'paus'), c('K', 'espadas'), c('4', 'ouros')],
+    }).linhaId,
+    'trinca_do_par',
+  );
+  assert.equal(
+    sintetizarVilaoAssumido({
+      holeHeroi: [c('2', 'copas'), c('3', 'ouros')],
+      comunitarias: [c('A', 'espadas'), c('9', 'espadas'), c('4', 'espadas')],
+    }).linhaId,
+    'flush',
+  );
+  assert.equal(
+    sintetizarVilaoAssumido({
+      holeHeroi: [c('2', 'copas'), c('3', 'copas')],
+      comunitarias: [c('9', 'ouros'), c('10', 'paus'), c('J', 'espadas'), c('Q', 'copas')],
+    }).linhaId,
+    'straight',
+  );
+});
+
+test('naipe empatado usa o primeiro de NAIPES; quemGanhou ignora vilão em memória', () => {
+  const vilao = sintetizarVilaoAssumido({
+    holeHeroi: [c('2', 'copas'), c('3', 'ouros')],
+    comunitarias: [c('K', 'paus'), c('8', 'ouros'), c('4', 'copas')],
+  });
+  assert.equal(vilao.cartas[0].naipe, 'espadas');
+  const r1 = showdownDe(...Object.values(FIXTURE_KICKER_VOCE));
+  const r2 = showdownDe(...Object.values(FIXTURE_KICKER_VOCE));
+  assert.equal(r1.vencedorId, r2.vencedorId);
+});
+
+test('aridade inválida de desconto → { ok: false }', () => {
+  assert.deepEqual(avaliarDescontoStreet({ holeHeroi: [c('A', 'espadas')], comunitarias: CA033_FLOP }), {
+    ok: false,
+  });
+  assert.deepEqual(
+    avaliarDescontoStreet({
+      holeHeroi: CA033_HOLE,
+      comunitarias: [c('2', 'ouros'), c('5', 'paus')],
+    }),
+    { ok: false },
+  );
+  assert.deepEqual(
+    avaliarDescontoStreet({
+      holeHeroi: CA033_HOLE,
+      comunitarias: [...CA033_FLOP, c('2', 'copas'), c('3', 'ouros')],
+    }),
+    { ok: false },
+  );
 });

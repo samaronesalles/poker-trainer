@@ -1,14 +1,16 @@
-/** Contrato de pergunta, feedback e 1ª tentativa. Motor em flop/turn + upgrades no pouso + showdown no river. */
+/** Contrato de pergunta, feedback e 1ª tentativa. Motor em flop/turn + desconto no pouso + showdown no river. */
 
 import { rotuloPoteCurto, streetVisivel } from './layout.js';
 import {
   CATEGORIAS,
   UNIVERSO_POTE,
+  avaliarDescontoStreet,
   avaliarMelhor5,
   conjuntoOpcoesMaoAtual,
+  conjuntoOpcoesOdd,
+  conjuntoOpcoesQuantidade,
   conjuntoOpcoesUpgrade,
   conjuntoOpcoesVencedor,
-  enumerarUpgrades,
   quemGanhou,
 } from './motor.js';
 
@@ -19,10 +21,13 @@ export const COPY = Object.freeze({
   ctaContinuar: 'Continuar',
   ctaConfirmar: 'Confirmar',
   ctaNenhuma: 'Nenhuma',
-  semUpgrade: 'Não há upgrade possível.',
+  semUpgrade: 'Não há mão que vire o pote.',
   linhaErroEnumeracao: 'Não foi possível continuar esta mão. Tente de novo.',
   enunciadoHero: 'Qual mão você tem agora?',
-  enunciadoUpgrades: 'Quais mãos você ainda não tem, mas ainda pode formar?',
+  enunciadoUpgrades: 'Quais mãos melhoram o seu jogo com chance de ganhar o pote?',
+  enunciadoOuts: 'Quantas outs você tem?',
+  enunciadoRanks: 'Quais ranks são outs?',
+  enunciadoOdd: 'Qual é a sua odd?',
   enunciadoA: 'Qual mão o Adversário A completou?',
   enunciadoB: 'Qual mão o Adversário B completou?',
   enunciadoPote: 'Quem ganhou o pote?',
@@ -30,6 +35,10 @@ export const COPY = Object.freeze({
   acerto: 'Você acertou',
   erro: 'Não é essa. Tente de novo.',
   revelado: 'Estas são as mãos ainda possíveis.',
+  linhaParMaisAlto: 'Suponha que o adversário já tem o par mais alto da mesa.',
+  linhaTrincaDoPar: 'Suponha que o adversário já tem trinca do par da mesa.',
+  linhaStraight: 'Suponha que o adversário já tem Straight.',
+  linhaFlush: 'Suponha que o adversário já tem Flush.',
 });
 
 export const APELIDOS = Object.freeze({
@@ -42,14 +51,38 @@ export const PASSOS = Object.freeze({
   flop_hero: 'flop_hero',
   flop_upgrade: 'flop_upgrade',
   flop_skip: 'flop_skip',
+  flop_outs: 'flop_outs',
+  flop_ranks: 'flop_ranks',
+  flop_odds: 'flop_odds',
   turn_hero: 'turn_hero',
   turn_upgrade: 'turn_upgrade',
   turn_skip: 'turn_skip',
+  turn_outs: 'turn_outs',
+  turn_ranks: 'turn_ranks',
+  turn_odds: 'turn_odds',
   river_hero: 'river_hero',
   river_a: 'river_a',
   river_b: 'river_b',
   river_vencedor: 'river_vencedor',
 });
+
+export const ROTULOS_RANKS = Object.freeze({
+  2: '2',
+  3: '3',
+  4: '4',
+  5: '5',
+  6: '6',
+  7: '7',
+  8: '8',
+  9: '9',
+  10: '10',
+  J: 'Valete',
+  Q: 'Dama',
+  K: 'Rei',
+  A: 'Ás',
+});
+
+const IDS_RANKS = Object.freeze(['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']);
 
 const INDICES_HOLE_RIVER = Object.freeze({
   voce: Object.freeze([4, 5]),
@@ -68,8 +101,23 @@ export function rotuloVencedor(vencedorId) {
 }
 
 export function modoDoPasso(passo) {
-  if (passo === PASSOS.flop_upgrade || passo === PASSOS.turn_upgrade) return 'multipla';
+  if (
+    passo === PASSOS.flop_upgrade ||
+    passo === PASSOS.turn_upgrade ||
+    passo === PASSOS.flop_ranks ||
+    passo === PASSOS.turn_ranks
+  ) {
+    return 'multipla';
+  }
   if (passo === PASSOS.flop_skip || passo === PASSOS.turn_skip) return null;
+  if (
+    passo === PASSOS.flop_outs ||
+    passo === PASSOS.turn_outs ||
+    passo === PASSOS.flop_odds ||
+    passo === PASSOS.turn_odds
+  ) {
+    return 'unica';
+  }
   return 'unica';
 }
 
@@ -124,10 +172,6 @@ export function extrairBoardStreet(cartasJogo, passo) {
   const indices = INDICES_BOARD_STREET[passo];
   if (!indices || !Array.isArray(cartasJogo)) return [];
   return indices.map((indice) => identidadeCarta(cartasJogo[indice]));
-}
-
-function rotuloCategoria(id) {
-  return CATEGORIAS.find((item) => item.id === id)?.rotulo ?? id;
 }
 
 function criarOpcoesMaoAtual(cartasJogo, passo, rng) {
@@ -254,14 +298,20 @@ export function streetVisivelDoPasso(passo) {
   if (
     passo === PASSOS.flop_hero ||
     passo === PASSOS.flop_upgrade ||
-    passo === PASSOS.flop_skip
+    passo === PASSOS.flop_skip ||
+    passo === PASSOS.flop_outs ||
+    passo === PASSOS.flop_ranks ||
+    passo === PASSOS.flop_odds
   ) {
     return streetVisivel('flop');
   }
   if (
     passo === PASSOS.turn_hero ||
     passo === PASSOS.turn_upgrade ||
-    passo === PASSOS.turn_skip
+    passo === PASSOS.turn_skip ||
+    passo === PASSOS.turn_outs ||
+    passo === PASSOS.turn_ranks ||
+    passo === PASSOS.turn_odds
   ) {
     return streetVisivel('turn');
   }
@@ -276,6 +326,21 @@ export function streetVisivelDoPasso(passo) {
   return null;
 }
 
+function rotuloCategoria(id) {
+  return CATEGORIAS.find((item) => item.id === id)?.rotulo ?? id;
+}
+
+export function linhaSuposicaoDe(linhaId, categoriaFeita) {
+  if (linhaId === 'par_mais_alto') return COPY.linhaParMaisAlto;
+  if (linhaId === 'trinca_do_par') return COPY.linhaTrincaDoPar;
+  if (linhaId === 'straight') return COPY.linhaStraight;
+  if (linhaId === 'flush') return COPY.linhaFlush;
+  if (linhaId === 'rotulo') {
+    return `Suponha que o adversário já tem ${rotuloCategoria(categoriaFeita)}.`;
+  }
+  return null;
+}
+
 export function enunciadoDoPasso(passo) {
   switch (passo) {
     case PASSOS.flop_hero:
@@ -285,6 +350,15 @@ export function enunciadoDoPasso(passo) {
     case PASSOS.flop_upgrade:
     case PASSOS.turn_upgrade:
       return COPY.enunciadoUpgrades;
+    case PASSOS.flop_outs:
+    case PASSOS.turn_outs:
+      return COPY.enunciadoOuts;
+    case PASSOS.flop_ranks:
+    case PASSOS.turn_ranks:
+      return COPY.enunciadoRanks;
+    case PASSOS.flop_odds:
+    case PASSOS.turn_odds:
+      return COPY.enunciadoOdd;
     case PASSOS.river_a:
       return COPY.enunciadoA;
     case PASSOS.river_b:
@@ -296,9 +370,27 @@ export function enunciadoDoPasso(passo) {
   }
 }
 
+function snapshotFalho(street) {
+  return {
+    ok: false,
+    street,
+    lista: null,
+    conjunto: null,
+    categoriaAtual: null,
+    vilao: null,
+    outs: null,
+    n: null,
+    ranks: null,
+    odd: null,
+    quantidade: null,
+    opcoesOdd: null,
+  };
+}
+
 export function prepararUpgradesStreet(sessao) {
   if (!sessao?.mao || !Array.isArray(sessao.mao.cartasJogo)) {
     if (sessao?.mao) {
+      sessao.mao.descontoStreet = snapshotFalho(null);
       sessao.mao.upgradesStreet = { ok: false, lista: null, conjunto: null, categoriaAtual: null, street: null };
     }
     return;
@@ -309,9 +401,10 @@ export function prepararUpgradesStreet(sessao) {
   const holeHeroi = [4, 5].map((indice) => identidadeCarta(sessao.mao.cartasJogo[indice]));
   const indicesBoard = street === 'turn' ? [6, 7, 8, 9] : [6, 7, 8];
   const comunitarias = indicesBoard.map((indice) => identidadeCarta(sessao.mao.cartasJogo[indice]));
-  const resultado = enumerarUpgrades({ holeHeroi, comunitarias });
+  const resultado = avaliarDescontoStreet({ holeHeroi, comunitarias });
 
   if (!resultado.ok) {
+    sessao.mao.descontoStreet = snapshotFalho(street);
     sessao.mao.upgradesStreet = {
       ok: false,
       lista: null,
@@ -323,17 +416,40 @@ export function prepararUpgradesStreet(sessao) {
   }
 
   const lista = resultado.upgrades;
+  const conjunto = lista.length >= 1 ? conjuntoOpcoesUpgrade({ upgrades: lista }) : null;
+  const quantidade =
+    lista.length >= 1 && resultado.n >= 1 ? conjuntoOpcoesQuantidade({ n: resultado.n }) : null;
+  const opcoesOdd =
+    lista.length >= 1 && resultado.odd ? conjuntoOpcoesOdd({ x: resultado.odd.x }) : null;
+
+  sessao.mao.descontoStreet = {
+    ok: true,
+    street,
+    lista,
+    conjunto,
+    categoriaAtual: resultado.categoriaAtual,
+    vilao: {
+      categoriaFeita: resultado.vilao.categoriaFeita,
+      linhaId: resultado.vilao.linhaId,
+    },
+    outs: resultado.outs,
+    n: resultado.n,
+    ranks: resultado.ranks,
+    odd: resultado.odd,
+    quantidade,
+    opcoesOdd,
+  };
   sessao.mao.upgradesStreet = {
     ok: true,
     lista,
-    conjunto: lista.length >= 1 ? conjuntoOpcoesUpgrade({ upgrades: lista }) : null,
+    conjunto,
     categoriaAtual: resultado.categoriaAtual,
     street,
   };
 }
 
 export function decidirPosMaoAtual(sessao) {
-  const estado = sessao?.mao?.upgradesStreet;
+  const estado = sessao?.mao?.descontoStreet ?? sessao?.mao?.upgradesStreet;
   if (!estado) return 'pendente';
   if (estado.ok === false) return 'falha';
   if (!Array.isArray(estado.lista)) return 'falha';
@@ -401,6 +517,57 @@ function pintarAcertoBeat(sessao) {
   sessao.mao.faseTentativa = 'aguardando_beat';
 }
 
+function aplicarLinhaSuposicao(sessao, passo) {
+  const comLinha = new Set([
+    PASSOS.flop_upgrade,
+    PASSOS.turn_upgrade,
+    PASSOS.flop_outs,
+    PASSOS.turn_outs,
+    PASSOS.flop_ranks,
+    PASSOS.turn_ranks,
+    PASSOS.flop_odds,
+    PASSOS.turn_odds,
+  ]);
+  if (!comLinha.has(passo)) {
+    sessao.hud.linhaSuposicao = null;
+    return;
+  }
+  const vilao = sessao.mao.descontoStreet?.vilao;
+  sessao.hud.linhaSuposicao = linhaSuposicaoDe(vilao?.linhaId, vilao?.categoriaFeita);
+}
+
+function criarOpcoesQuantidade(desconto, rng) {
+  const conjunto = desconto?.quantidade ?? conjuntoOpcoesQuantidade({ n: desconto?.n });
+  const n = desconto?.n;
+  return shuffleOpcoes(
+    (conjunto.ids ?? []).map((valor) =>
+      baseOpcao({ id: valor, rotulo: String(valor) }, 'quantidade', valor === n),
+    ),
+    rng,
+  );
+}
+
+function criarOpcoesRanks(desconto, rng) {
+  const verdadeiros = new Set(desconto?.ranks ?? []);
+  return shuffleOpcoes(
+    IDS_RANKS.map((id) =>
+      baseOpcao({ id, rotulo: ROTULOS_RANKS[id] }, 'rank', verdadeiros.has(id)),
+    ),
+    rng,
+  );
+}
+
+function criarOpcoesOdd(desconto, rng) {
+  const conjunto = desconto?.opcoesOdd ?? conjuntoOpcoesOdd({ x: desconto?.odd?.x });
+  const x = desconto?.odd?.x;
+  return shuffleOpcoes(
+    (conjunto.ids ?? []).map((item) =>
+      baseOpcao({ id: item.valor, rotulo: item.rotulo }, 'odd', item.valor === x),
+    ),
+    rng,
+  );
+}
+
 export function apresentarPergunta(sessao, passo, rng = Math.random) {
   sessao.mao.passo = passo;
   sessao.mao.faseTentativa = 'aguardando_primeira';
@@ -413,6 +580,7 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
   sessao.hud.hint = null;
   sessao.hud.street = streetVisivelDoPasso(passo);
   limparFeedback(sessao);
+  aplicarLinhaSuposicao(sessao, passo);
 
   if (passo === PASSOS.river_vencedor) {
     const montagem = criarOpcoesPote(sessao, rng);
@@ -424,14 +592,43 @@ export function apresentarPergunta(sessao, passo, rng = Math.random) {
   }
 
   if (passo === PASSOS.flop_upgrade || passo === PASSOS.turn_upgrade) {
-    const conjunto = sessao.mao.upgradesStreet?.conjunto ?? conjuntoOpcoesUpgrade({
-      upgrades: sessao.mao.upgradesStreet?.lista ?? [],
+    const snap = sessao.mao.descontoStreet ?? sessao.mao.upgradesStreet;
+    const conjunto = snap?.conjunto ?? conjuntoOpcoesUpgrade({
+      upgrades: snap?.lista ?? [],
     });
     sessao.mao.corretaUnica = null;
     sessao.mao.conjuntoCorreto = [...(conjunto.verdadeiros ?? [])];
     sessao.hud.opcoes = criarOpcoesUpgrade(conjunto, rng);
     sessao.hud.hint = COPY.hintMultipla;
     atualizarCtaMultipla(sessao);
+    return;
+  }
+
+  if (passo === PASSOS.flop_outs || passo === PASSOS.turn_outs) {
+    const snap = sessao.mao.descontoStreet;
+    sessao.mao.corretaUnica = snap?.n;
+    sessao.mao.conjuntoCorreto = [];
+    sessao.hud.opcoes = criarOpcoesQuantidade(snap, rng);
+    sessao.hud.cta = null;
+    return;
+  }
+
+  if (passo === PASSOS.flop_ranks || passo === PASSOS.turn_ranks) {
+    const snap = sessao.mao.descontoStreet;
+    sessao.mao.corretaUnica = null;
+    sessao.mao.conjuntoCorreto = [...(snap?.ranks ?? [])];
+    sessao.hud.opcoes = criarOpcoesRanks(snap, rng);
+    sessao.hud.hint = COPY.hintMultipla;
+    atualizarCtaMultipla(sessao);
+    return;
+  }
+
+  if (passo === PASSOS.flop_odds || passo === PASSOS.turn_odds) {
+    const snap = sessao.mao.descontoStreet;
+    sessao.mao.corretaUnica = snap?.odd?.x;
+    sessao.mao.conjuntoCorreto = [];
+    sessao.hud.opcoes = criarOpcoesOdd(snap, rng);
+    sessao.hud.cta = null;
     return;
   }
 
@@ -464,6 +661,12 @@ function deltasUnica(sessao, acerto) {
         erros: acerto ? 0 : 1,
       },
     ];
+  }
+  if (passo === PASSOS.flop_outs || passo === PASSOS.turn_outs) {
+    return [{ bucket: 'outs', acertos: acerto ? 1 : 0, erros: acerto ? 0 : 1 }];
+  }
+  if (passo === PASSOS.flop_odds || passo === PASSOS.turn_odds) {
+    return [{ bucket: 'odds', acertos: acerto ? 1 : 0, erros: acerto ? 0 : 1 }];
   }
   return [
     {
@@ -513,6 +716,10 @@ export function alternarOpcao(sessao, id) {
   atualizarCtaMultipla(sessao);
 }
 
+function passoDeRanks(passo) {
+  return passo === PASSOS.flop_ranks || passo === PASSOS.turn_ranks;
+}
+
 export function confirmarMultipla(sessao) {
   if (sessao.hud.estado !== 'perguntando' || !sessao.mao) return;
   if (sessao.mao.faseTentativa === 'aguardando_beat') return;
@@ -520,6 +727,7 @@ export function confirmarMultipla(sessao) {
 
   const primeira = sessao.mao.faseTentativa === 'aguardando_primeira';
   const perfeito = conjuntoExibidoPerfeito(sessao.hud.opcoes);
+  const ranks = passoDeRanks(sessao.mao.passo);
   const deltas = [];
 
   for (const opcao of sessao.hud.opcoes) {
@@ -532,10 +740,10 @@ export function confirmarMultipla(sessao) {
         opcao.marca = 'acerto';
         opcao.ativavel = false;
         opcao.desabilitada = true;
-        if (primeira) {
+        if (primeira && !ranks) {
           deltas.push({ bucket: 'upgrade', categoria: opcao.id, acertos: 1 });
         }
-      } else if (primeira) {
+      } else if (primeira && !ranks) {
         deltas.push({ bucket: 'upgrade', categoria: opcao.id, erros: 1 });
       }
       continue;
@@ -546,13 +754,21 @@ export function confirmarMultipla(sessao) {
       opcao.marca = 'corte';
       opcao.ativavel = false;
       opcao.desabilitada = true;
-      if (primeira) {
+      if (primeira && !ranks) {
         deltas.push({ bucket: 'upgrade', categoria: opcao.id, erros: 1 });
       }
     }
   }
 
-  if (primeira) persistirPrimeira(sessao, deltas);
+  if (primeira) {
+    if (ranks) {
+      persistirPrimeira(sessao, [
+        { bucket: 'outs', acertos: perfeito ? 1 : 0, erros: perfeito ? 0 : 1 },
+      ]);
+    } else {
+      persistirPrimeira(sessao, deltas);
+    }
+  }
 
   if (perfeito) {
     pintarAcertoBeat(sessao);
